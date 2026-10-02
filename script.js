@@ -1,3 +1,4 @@
+console.log("ClassMark script loaded");
 // ================================
 // SUPABASE CONNECTION
 // ================================
