@@ -1,4 +1,14 @@
 // ================================
+// SUPABASE CONNECTION
+// ================================
+
+const SUPABASE_URL = "SAKA_API_URL_DINKA_ANAN";
+const SUPABASE_PUBLIC_KEY = "SAKA_PUBLIC_KEY_DINKA_ANAN";
+
+const supabaseClient = supabase.https://wzqcjbuotsipshjgrboo.supabase.co/rest/v1/ ,
+    sb_publishable_qwB02PL2sdF7gHDOjXgJpA_-d_W4o6m
+);
+ ================================
 // CLASSMARK - MAIN JAVASCRIPT
 // ================================
 
