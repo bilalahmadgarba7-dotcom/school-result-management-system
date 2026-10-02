@@ -3,7 +3,7 @@ console.log("ClassMark script loaded");
 // ================================
 // SUPABASE CONNECTION
 // ================================
-const SUPABASE_URL = "https://wzqcjbuotsipshjgrboo.supabase.co/rest/v1/";
+const SUPABASE_URL = const SUPABASE_URL = "https://wzqcjbuotsipshjgrboo.supabase.co";
 const SUPABASE_PUBLIC_KEY = "sb_publishable_qwB02PL2sdF7gHDOjXgJpA_-d_W4o6m";
 
 const supabaseClient = window.supabase.createClient(
