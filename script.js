@@ -94,28 +94,82 @@ async function login(event) {
 
     event.preventDefault();
 
-
-    // Get username and password
-    const username =
+    // Get email and password
+    const email =
         document.getElementById("username").value.trim();
 
     const password =
         document.getElementById("password").value.trim();
 
-
     // Check empty fields
-    if (!username || !password) {
+    if (!email || !password) {
 
         alert(
-            "Please enter your username and password."
+            "Please enter your email and password."
         );
 
         return;
+    }
+
+    try {
+
+        // ================================
+        // SUPABASE AUTH LOGIN
+        // ================================
+        const {
+            data,
+            error
+        } = await supabaseClient.auth.signInWithPassword({
+
+            email: email,
+
+            password: password
+
+        });
+
+        // Authentication failed
+        if (error) {
+
+            console.error(
+                "Authentication error:",
+                error
+            );
+
+            alert(
+                "Invalid email or password."
+            );
+
+            return;
+        }
+
+        // ================================
+        // LOGIN SUCCESSFUL
+        // ================================
+        console.log(
+            "Logged in user:",
+            data.user
+        );
+
+        alert(
+            "Login successful! Welcome to ClassMark."
+        );
+
+        closeLogin();
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected login error:",
+            error
+        );
+
+        alert(
+            "Something went wrong while logging in. Please try again."
+        );
 
     }
 
-
-    try {
+}
 
         // ================================
         // FIND TEACHER EMAIL
