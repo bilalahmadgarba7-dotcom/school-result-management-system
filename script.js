@@ -1,9 +1,11 @@
 console.log("ClassMark script loaded");
+
 // ================================
 // SUPABASE CONNECTION
 // ================================
- ================================
-//CLASSMARK - MAIN JAVASCRIPT
+
+// ================================
+// CLASSMARK - MAIN JAVASCRIPT
 // ================================
 
 
