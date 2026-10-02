@@ -1,0 +1,346 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+    <title>ClassMark | School Result Management</title>
+
+    <meta
+        name="description"
+        content="A modern school result, marks, attendance and class management system."
+    >
+
+    <link rel="stylesheet" href="style.css">
+</head>
+
+<body>
+
+    <!-- HEADER -->
+    <header class="header">
+        <div class="container nav">
+
+            <a href="#" class="logo">
+                <span class="logo-icon">CM</span>
+                <span>ClassMark</span>
+            </a>
+
+            <button class="login-btn" onclick="showLogin()">
+                Teacher Login
+            </button>
+
+        </div>
+    </header>
+
+
+    <!-- HERO -->
+    <main>
+
+        <section class="hero">
+
+            <div class="container hero-content">
+
+                <div class="hero-text">
+
+                    <span class="badge">
+                        SCHOOL MANAGEMENT SYSTEM
+                    </span>
+
+                    <h1>
+                        Manage Your Class.
+                        <span>Calculate Results.</span>
+                        Save Time.
+                    </h1>
+
+                    <p>
+                        A simple and professional platform for teachers
+                        to manage students, subjects, marks, attendance,
+                        results and class positions in one place.
+                    </p>
+
+                    <div class="hero-buttons">
+
+                        <button
+                            class="primary-btn"
+                            onclick="showLogin()"
+                        >
+                            Get Started
+                        </button>
+
+                        <button
+                            class="secondary-btn"
+                            onclick="learnMore()"
+                        >
+                            Learn More
+                        </button>
+
+                    </div>
+
+                </div>
+
+
+                <!-- DASHBOARD PREVIEW -->
+
+                <div class="dashboard-preview">
+
+                    <div class="preview-header">
+                        <div>
+                            <small>WELCOME BACK</small>
+                            <h3>Teacher Dashboard</h3>
+                        </div>
+
+                        <div class="profile-circle">
+                            T
+                        </div>
+                    </div>
+
+
+                    <div class="school-info">
+                        <strong>Example Model School</strong>
+                        <span>JSS 2B • 2026/2027 • First Term</span>
+                    </div>
+
+
+                    <div class="stats">
+
+                        <div class="stat-card">
+                            <strong>42</strong>
+                            <span>Students</span>
+                        </div>
+
+                        <div class="stat-card">
+                            <strong>10</strong>
+                            <span>Subjects</span>
+                        </div>
+
+                        <div class="stat-card">
+                            <strong>94%</strong>
+                            <span>Complete</span>
+                        </div>
+
+                    </div>
+
+
+                    <div class="result-preview">
+
+                        <div class="result-title">
+                            <strong>Recent Results</strong>
+                            <span>View All</span>
+                        </div>
+
+                        <div class="student-row">
+                            <span>Ahmad Musa</span>
+                            <strong>82%</strong>
+                        </div>
+
+                        <div class="student-row">
+                            <span>Hauwa Ibrahim</span>
+                            <strong>78%</strong>
+                        </div>
+
+                        <div class="student-row">
+                            <span>Aliyu Abdullahi</span>
+                            <strong>74%</strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        <!-- FEATURES -->
+
+        <section class="features">
+
+            <div class="container">
+
+                <div class="section-heading">
+
+                    <span class="badge">
+                        EVERYTHING IN ONE PLACE
+                    </span>
+
+                    <h2>
+                        Everything a Teacher Needs
+                    </h2>
+
+                    <p>
+                        Manage your classroom without complicated
+                        spreadsheets or manual calculations.
+                    </p>
+
+                </div>
+
+
+                <div class="feature-grid">
+
+                    <div class="feature-card">
+                        <div class="feature-icon">👨‍🎓</div>
+                        <h3>Student Management</h3>
+                        <p>
+                            Add students manually or upload a complete
+                            student list.
+                        </p>
+                    </div>
+
+
+                    <div class="feature-card">
+                        <div class="feature-icon">📊</div>
+                        <h3>Automatic Results</h3>
+                        <p>
+                            Automatically calculate totals, averages,
+                            grades and positions.
+                        </p>
+                    </div>
+
+
+                    <div class="feature-card">
+                        <div class="feature-icon">📝</div>
+                        <h3>CA & Examination</h3>
+                        <p>
+                            Record multiple CA assessments and examination
+                            scores for every subject.
+                        </p>
+                    </div>
+
+
+                    <div class="feature-card">
+                        <div class="feature-icon">📅</div>
+                        <h3>Attendance</h3>
+                        <p>
+                            Track student attendance and automatically
+                            calculate attendance percentages.
+                        </p>
+                    </div>
+
+
+                    <div class="feature-card">
+                        <div class="feature-icon">📄</div>
+                        <h3>Professional Reports</h3>
+                        <p>
+                            Generate printable student report sheets
+                            and PDF results.
+                        </p>
+                    </div>
+
+
+                    <div class="feature-card">
+                        <div class="feature-icon">📷</div>
+                        <h3>Score Sheet Upload</h3>
+                        <p>
+                            Upload score sheets and extract marks
+                            automatically with OCR technology.
+                        </p>
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+    </main>
+
+
+    <!-- LOGIN MODAL -->
+
+    <div id="loginModal" class="modal">
+
+        <div class="modal-content">
+
+            <button
+                class="close-btn"
+                onclick="closeLogin()"
+            >
+                ×
+            </button>
+
+            <div class="login-header">
+
+                <div class="login-logo">
+                    CM
+                </div>
+
+                <h2>Teacher Login</h2>
+
+                <p>
+                    Sign in to manage your class.
+                </p>
+
+            </div>
+
+
+            <form onsubmit="login(event)">
+
+                <label>
+                    Username
+                </label>
+
+                <input
+                    type="text"
+                    id="username"
+                    placeholder="Enter your username"
+                    required
+                >
+
+
+                <label>
+                    Password
+                </label>
+
+                <input
+                    type="password"
+                    id="password"
+                    placeholder="Enter your password"
+                    required
+                >
+
+
+                <button
+                    type="submit"
+                    class="primary-btn full-width"
+                >
+                    Sign In
+                </button>
+
+            </form>
+
+            <p class="demo-note">
+                Demo interface — database authentication will be connected later.
+            </p>
+
+        </div>
+
+    </div>
+
+
+    <!-- FOOTER -->
+
+    <footer>
+
+        <div class="container footer-content">
+
+            <div>
+                <strong>ClassMark</strong>
+                <p>
+                    Smart classroom and result management.
+                </p>
+            </div>
+
+            <p>
+                © 2026 ClassMark. All rights reserved.
+            </p>
+
+        </div>
+
+    </footer>
+
+
+    <script src="script.js"></script>
+
+</body>
+</html>
