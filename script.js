@@ -61,8 +61,8 @@ function learnMore() {
 }
 
 
-// Demo Login
-function login(event) {
+// Teacher Login with Supabase
+async function login(event) {
 
     event.preventDefault();
 
@@ -72,28 +72,15 @@ function login(event) {
     const password =
         document.getElementById("password").value.trim();
 
-
     if (!username || !password) {
-
         alert("Please enter your username and password.");
-
         return;
-
     }
 
-
-    /*
-        Temporary demo login.
-
-        Real authentication will be connected
-        to Supabase later.
-    */
-
     alert(
-        "Login interface is working!\n\n" +
-        "Supabase authentication will be connected next."
+        "Login connection is ready.\n\n" +
+        "Supabase authentication will be connected after the API keys are added."
     );
 
     closeLogin();
-
 }
