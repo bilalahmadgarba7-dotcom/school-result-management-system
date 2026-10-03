@@ -1,5 +1,5 @@
 console.log("ClassMark script loaded");
-
+alert("ClassMark JavaScript is working!");
 // ================================
 // SUPABASE CONNECTION
 // ================================
