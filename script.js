@@ -258,4 +258,102 @@ async function login(event) {
     }
 
 }
+// ==========================================
+// LOAD TEACHER PROFILE
+// ==========================================
+
+async function loadTeacherProfile() {
+
+    if (!currentUser) {
+
+        console.warn(
+            "Cannot load teacher profile: no authenticated user."
+        );
+
+        return null;
+    }
+
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .from("Teacher")
+                .select(`
+                    id,
+                    full_name,
+                    phone,
+                    username,
+                    email,
+                    school_name,
+                    class_name,
+                    session,
+                    term
+                `)
+                .eq(
+                    "id",
+                    currentUser.id
+                )
+                .maybeSingle();
+
+
+        if (error) {
+
+            console.error(
+                "Teacher profile error:",
+                error
+            );
+
+            alert(
+                "Unable to load your teacher profile."
+            );
+
+            return null;
+        }
+
+
+        if (!data) {
+
+            console.warn(
+                "No teacher profile found."
+            );
+
+            alert(
+                "Your teacher profile was not found."
+            );
+
+            return null;
+        }
+
+
+        teacherProfile = data;
+
+
+        console.log(
+            "Teacher profile loaded:",
+            teacherProfile
+        );
+
+
+        return teacherProfile;
+
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected teacher profile error:",
+            error
+        );
+
+        alert(
+            "Something went wrong while loading your profile."
+        );
+
+        return null;
+    }
+
+}
     
