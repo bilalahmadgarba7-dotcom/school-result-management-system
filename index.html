@@ -20,30 +20,42 @@
 </head>
 <body>
     <!-- ================================
-         HEADER
-    ================================= -->
-    <header class="header">
-        <div class="container nav">
-            <a
-                href="#"
-                class="logo"
-            >
-                <span class="logo-icon">
-                    CM
-                </span>
-                <span>
-                    ClassMark
-                </span>
+     HEADER
+================================= -->
+<header class="header">
+    <div class="container nav">
+        <!-- BRAND -->
+        <a href="#" class="logo" aria-label="ClassMark Home">
+            <span class="logo-icon">
+                CM
+            </span>
+            <span class="logo-text">
+                ClassMark
+            </span>
+        </a>
+        <!-- NAVIGATION -->
+        <nav class="nav-links" aria-label="Main navigation">
+            <a href="#features">
+                Features
             </a>
-            <button
-                type="button"
-                class="login-btn"
-                onclick="showLogin()"
-            >
-                Teacher Login
-            </button>
-        </div>
-    </header>
+            <a href="#about">
+                About
+            </a>
+            <a href="#contact">
+                Contact
+            </a>
+        </nav>
+        <!-- LOGIN -->
+        <button
+            type="button"
+            class="login-btn"
+            onclick="showLogin()"
+        >
+            Teacher Login
+        </button>
+    </div>
+</header>
+        
     <!-- ================================
          HERO
     ================================= -->
