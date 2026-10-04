@@ -138,3 +138,124 @@ supabaseClient
 
         }
     );
+    // ==========================================
+// TEACHER LOGIN
+// ==========================================
+
+async function login(event) {
+
+    event.preventDefault();
+
+
+    const email =
+        document
+            .getElementById("username")
+            .value
+            .trim();
+
+    const password =
+        document
+            .getElementById("password")
+            .value;
+
+
+    if (!email || !password) {
+
+        alert(
+            "Please enter your email and password."
+        );
+
+        return;
+    }
+
+
+    const submitButton =
+        document.querySelector(
+            "#loginForm button[type='submit']"
+        );
+
+
+    if (submitButton) {
+
+        submitButton.disabled = true;
+
+        submitButton.textContent =
+            "Signing in...";
+
+    }
+
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .auth
+                .signInWithPassword({
+                    email: email,
+                    password: password
+                });
+
+
+        if (error) {
+
+            console.error(
+                "Login error:",
+                error
+            );
+
+            alert(
+                "Login failed. Please check your email and password."
+            );
+
+            return;
+        }
+
+
+        currentUser =
+            data.user;
+
+
+        console.log(
+            "Login successful:",
+            currentUser.email
+        );
+
+
+        closeLogin();
+
+
+        alert(
+            "Welcome to ClassMark!"
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected login error:",
+            error
+        );
+
+        alert(
+            "Something went wrong. Please try again."
+        );
+
+
+    } finally {
+
+        if (submitButton) {
+
+            submitButton.disabled = false;
+
+            submitButton.textContent =
+                "Sign In to ClassMark";
+
+        }
+
+    }
+
+}
+    
