@@ -7,12 +7,38 @@
         content="width=device-width, initial-scale=1.0"
     >
     <title>
-        ClassMark | School Result Management
+        ClassMark | Smart School Result Management
     </title>
     <meta
         name="description"
-        content="A modern school result, marks, attendance and class management system."
+        content="ClassMark is a professional school result management platform for teachers to manage students, subjects, marks, attendance and academic results."
     >
+    <meta
+        name="theme-color"
+        content="#0b1220"
+    >
+    <meta
+        name="robots"
+        content="index, follow"
+    >
+    <!-- Open Graph / Social Sharing -->
+    <meta
+        property="og:title"
+        content="ClassMark | Smart School Result Management"
+    >
+    <meta
+        property="og:description"
+        content="Manage students, marks, attendance and academic results with ClassMark."
+    >
+    <meta
+        property="og:type"
+        content="website"
+    >
+    <meta
+        property="og:site_name"
+        content="ClassMark"
+    >
+    <!-- Stylesheet -->
     <link
         rel="stylesheet"
         href="style.css"
@@ -20,432 +46,480 @@
 </head>
 <body>
     <!-- ================================
-     HEADER
-================================= -->
-<header class="header">
-    <div class="container nav">
-        <!-- BRAND -->
-        <a href="#" class="logo" aria-label="ClassMark Home">
-            <span class="logo-icon">
-                CM
-            </span>
-            <span class="logo-text">
-                ClassMark
-            </span>
-        </a>
-        <!-- NAVIGATION -->
-        <nav class="nav-links" aria-label="Main navigation">
-            <a href="#features">
-                Features
-            </a>
-            <a href="#about">
-                About
-            </a>
-            <a href="#contact">
-                Contact
-            </a>
-        </nav>
-        <!-- LOGIN -->
-        <button
-            type="button"
-            class="login-btn"
-            onclick="showLogin()"
-        >
-            Teacher Login
-        </button>
-    </div>
-<!-- ================================
-     HERO
-================================= -->
-<main>
-    <section class="hero">
-        <div class="container hero-content">
-            <div class="hero-text">
-                <span class="hero-badge">
-                    SMART SCHOOL RESULT MANAGEMENT
+         HEADER
+    ================================= -->
+    <header class="header">
+        <div class="container nav">
+            <!-- BRAND -->
+            <a
+                href="#"
+                class="logo"
+                aria-label="ClassMark Home"
+            >
+                <span
+                    class="logo-icon"
+                    aria-hidden="true"
+                >
+                    CM
                 </span>
-                <h1>
-                    Manage Your Class.
-                    <span>
-                        Simplify Every Result.
+                <span class="logo-text">
+                    ClassMark
+                </span>
+            </a>
+            <!-- NAVIGATION -->
+            <nav
+                class="nav-links"
+                aria-label="Main navigation"
+            >
+                <a href="#features">
+                    Features
+                </a>
+                <a href="#about">
+                    About
+                </a>
+                <a href="#contact">
+                    Contact
+                </a>
+            </nav>
+            <!-- TEACHER LOGIN -->
+            <button
+                type="button"
+                class="login-btn"
+                onclick="showLogin()"
+            >
+                Teacher Login
+            </button>
+        </div>
+    </header>
+    <!-- ================================
+         MAIN CONTENT
+    ================================= -->
+    <main>
+        <!-- ================================
+             HERO
+        ================================= -->
+        <section
+            class="hero"
+            aria-labelledby="hero-title"
+        >
+            <div class="container hero-content">
+                <!-- HERO TEXT -->
+                <div class="hero-text">
+                    <span class="hero-badge">
+                        SMART SCHOOL RESULT MANAGEMENT
                     </span>
-                </h1>
-                <p>
-                    ClassMark gives teachers a smarter way to manage
-                    students, subjects, marks, attendance and academic
-                    results — all from one professional platform.
-                </p>
+                    <h1 id="hero-title">
+                        Manage Your Class.
+                        <span>
+                            Simplify Every Result.
+                        </span>
+                    </h1>
+                    <p>
+                        ClassMark gives teachers a smarter way to manage
+                        students, subjects, marks, attendance and academic
+                        results — all from one professional platform.
+                    </p>
+                    <div class="hero-buttons">
+                        <button
+                            type="button"
+                            class="primary-btn"
+                            onclick="showLogin()"
+                        >
+                            Get Started
+                        </button>
+                        <button
+                            type="button"
+                            class="secondary-btn"
+                            onclick="learnMore()"
+                        >
+                            Explore Features
+                        </button>
+                    </div>
+                    <div class="hero-note">
+                        Built for modern teachers, schools and classrooms.
+                    </div>
+                </div>
+                <!-- ================================
+                     DASHBOARD PREVIEW
+                ================================= -->
+                <div
+                    class="dashboard-preview"
+                    aria-label="ClassMark dashboard preview"
+                >
+                    <div class="preview-header">
+                        <div>
+                            <small>
+                                TEACHER DASHBOARD
+                            </small>
+                            <h3>
+                                Class Overview
+                            </h3>
+                        </div>
+                        <div
+                            class="profile-circle"
+                            aria-hidden="true"
+                        >
+                            T
+                        </div>
+                    </div>
+                    <!-- SCHOOL INFORMATION -->
+                    <div class="school-info">
+                        <strong>
+                            Example Model School
+                        </strong>
+                        <span>
+                            JSS 2B • 2026/2027 • First Term
+                        </span>
+                    </div>
+                    <!-- STATISTICS -->
+                    <div
+                        class="stats"
+                        aria-label="Class statistics"
+                    >
+                        <div class="stat-card">
+                            <strong>
+                                42
+                            </strong>
+                            <span>
+                                Students
+                            </span>
+                        </div>
+                        <div class="stat-card">
+                            <strong>
+                                10
+                            </strong>
+                            <span>
+                                Subjects
+                            </span>
+                        </div>
+                        <div class="stat-card">
+                            <strong>
+                                94%
+                            </strong>
+                            <span>
+                                Complete
+                            </span>
+                        </div>
+                    </div>
+                    <!-- RECENT RESULTS -->
+                    <div class="result-preview">
+                        <div class="result-title">
+                            <strong>
+                                Recent Results
+                            </strong>
+                            <span>
+                                View All
+                            </span>
+                        </div>
+                        <div class="student-row">
+                            <span>
+                                Ahmad Musa
+                            </span>
+                            <strong>
+                                82%
+                            </strong>
+                        </div>
+                        <div class="student-row">
+                            <span>
+                                Hauwa Ibrahim
+                            </span>
+                            <strong>
+                                78%
+                            </strong>
+                        </div>
+                        <div class="student-row">
+                            <span>
+                                Aliyu Abdullahi
+                            </span>
+                            <strong>
+                                74%
+                            </strong>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </section>
+        <!-- ================================
+             FEATURES
+        ================================= -->
+        <section
+            class="features"
+            id="features"
+            aria-labelledby="features-title"
+        >
+            <div class="container">
+                <div class="section-heading">
+                    <span class="hero-badge">
+                        POWERFUL CLASSROOM TOOLS
+                    </span>
+                    <h2 id="features-title">
+                        Everything You Need
+                        to Manage Your Class
+                    </h2>
+                    <p>
+                        From student records to final results, ClassMark
+                        brings the essential tools teachers need into one
+                        simple and professional workspace.
+                    </p>
+                </div>
+                <div class="feature-grid">
+                    <!-- STUDENT MANAGEMENT -->
+                    <article class="feature-card">
+                        <div
+                            class="feature-icon"
+                            aria-hidden="true"
+                        >
+                            👨‍🎓
+                        </div>
+                        <h3>
+                            Student Management
+                        </h3>
+                        <p>
+                            Add and organize student records, manage class
+                            lists and keep your classroom information
+                            structured in one place.
+                        </p>
+                    </article>
+                    <!-- AUTOMATIC RESULTS -->
+                    <article class="feature-card">
+                        <div
+                            class="feature-icon"
+                            aria-hidden="true"
+                        >
+                            📊
+                        </div>
+                        <h3>
+                            Automatic Results
+                        </h3>
+                        <p>
+                            Calculate subject totals, averages, grades,
+                            remarks and class positions automatically.
+                        </p>
+                    </article>
+                    <!-- MARKS -->
+                    <article class="feature-card">
+                        <div
+                            class="feature-icon"
+                            aria-hidden="true"
+                        >
+                            📝
+                        </div>
+                        <h3>
+                            Marks & Assessments
+                        </h3>
+                        <p>
+                            Record CA assessments and examination scores
+                            for every subject with less manual calculation.
+                        </p>
+                    </article>
+                    <!-- ATTENDANCE -->
+                    <article class="feature-card">
+                        <div
+                            class="feature-icon"
+                            aria-hidden="true"
+                        >
+                            📅
+                        </div>
+                        <h3>
+                            Attendance Tracking
+                        </h3>
+                        <p>
+                            Record attendance and automatically calculate
+                            present days, absent days and attendance rates.
+                        </p>
+                    </article>
+                    <!-- REPORTS -->
+                    <article class="feature-card">
+                        <div
+                            class="feature-icon"
+                            aria-hidden="true"
+                        >
+                            📄
+                        </div>
+                        <h3>
+                            Professional Reports
+                        </h3>
+                        <p>
+                            Generate structured student reports with marks,
+                            grades, positions, attendance and comments.
+                        </p>
+                    </article>
+                    <!-- OCR -->
+                    <article class="feature-card">
+                        <div
+                            class="feature-icon"
+                            aria-hidden="true"
+                        >
+                            📷
+                        </div>
+                        <h3>
+                            Score Sheet OCR
+                        </h3>
+                        <p>
+                            Upload score sheets and extract marks automatically
+                            with OCR technology, with review before saving.
+                        </p>
+                    </article>
+                </div>
+            </div>
+        </section>
+        <!-- ================================
+             ABOUT
+        ================================= -->
+        <section
+            class="features"
+            id="about"
+            aria-labelledby="about-title"
+        >
+            <div class="container">
+                <div class="section-heading">
+                    <span class="hero-badge">
+                        ABOUT CLASSMARK
+                    </span>
+                    <h2 id="about-title">
+                        Built to Make Classroom
+                        Management Simpler
+                    </h2>
+                    <p>
+                        ClassMark is designed to help teachers spend less time
+                        dealing with spreadsheets, manual calculations and
+                        scattered classroom records — and more time focusing
+                        on their students.
+                    </p>
+                </div>
+            </div>
+        </section>
+        <!-- ================================
+             CONTACT / CTA
+        ================================= -->
+        <section
+            class="features"
+            id="contact"
+            aria-labelledby="contact-title"
+        >
+            <div class="container">
+                <div class="section-heading">
+                    <span class="hero-badge">
+                        GET STARTED
+                    </span>
+                    <h2 id="contact-title">
+                        Ready to Manage Your Class Smarter?
+                    </h2>
+                    <p>
+                        Sign in to ClassMark and start managing your students,
+                        marks, attendance and academic results from one place.
+                    </p>
+                </div>
                 <div class="hero-buttons">
                     <button
                         type="button"
                         class="primary-btn"
                         onclick="showLogin()"
                     >
-                        Get Started
-                    </button>
-                    <button
-                        type="button"
-                        class="secondary-btn"
-                        onclick="learnMore()"
-                    >
-                        Explore Features
+                        Teacher Login
                     </button>
                 </div>
-                <div class="hero-note">
-                    Built for modern teachers, schools and classrooms.
-                </div>
             </div>
-            <!-- DASHBOARD PREVIEW -->
-            <div class="dashboard-preview">
-                <div class="preview-header">
-                    <div>
-                        <small>
-                            TEACHER DASHBOARD
-                        </small>
-                        <h3>
-                            Class Overview
-                        </h3>
-                    </div>
-                    <div
-                        class="profile-circle"
-                        aria-label="Teacher profile"
-                    >
-                        T
-                    </div>
-                </div>
-                <!-- SCHOOL INFORMATION -->
-                <div class="school-info">
-                    <strong>
-                        Example Model School
-                    </strong>
-                    <span>
-                        JSS 2B • 2026/2027 • First Term
-                    </span>
-                </div>
-                <!-- STATISTICS -->
-                <div class="stats">
-                    <div class="stat-card">
-                        <strong>
-                            42
-                        </strong>
-                        <span>
-                            Students
-                        </span>
-                    </div>
-                    <div class="stat-card">
-                        <strong>
-                            10
-                        </strong>
-                        <span>
-                            Subjects
-                        </span>
-                    </div>
-                    <div class="stat-card">
-                        <strong>
-                            94%
-                        </strong>
-                        <span>
-                            Complete
-                        </span>
-                    </div>
-                </div>
-                <!-- RECENT RESULTS -->
-                <div class="result-preview">
-                    <div class="result-title">
-                        <strong>
-                            Recent Results
-                        </strong>
-                        <span>
-                            View All
-                        </span>
-                    </div>
-                    <div class="student-row">
-                        <span>
-                            Ahmad Musa
-                        </span>
-                        <strong>
-                            82%
-                        </strong>
-                    </div>
-                    <div class="student-row">
-                        <span>
-                            Hauwa Ibrahim
-                        </span>
-                        <strong>
-                            78%
-                        </strong>
-                    </div>
-                    <div class="student-row">
-                        <span>
-                            Aliyu Abdullahi
-                        </span>
-                        <strong>
-                            74%
-                        </strong>
-                    </div>
-                </div>
-            </div>
-        </div>
-    </section>
-        <!-- ================================
-     FEATURES
-================================= -->
-<section
-    class="features"
-    id="features"
->
-    <div class="container">
-        <div class="section-heading">
-            <span class="hero-badge">
-                POWERFUL CLASSROOM TOOLS
-            </span>
-            <h2>
-                Everything You Need
-                to Manage Your Class
-            </h2>
-            <p>
-                From student records to final results, ClassMark
-                brings the essential tools teachers need into one
-                simple and professional workspace.
-            </p>
-        </div>
-        <div class="feature-grid">
-            <!-- STUDENTS -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    👨‍🎓
-                </div>
-                <h3>
-                    Student Management
-                </h3>
-                <p>
-                    Add and organize student records, manage class
-                    lists and keep your classroom information
-                    structured in one place.
-                </p>
-            </div>
-            <!-- RESULTS -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    📊
-                </div>
-                <h3>
-                    Automatic Results
-                </h3>
-                <p>
-                    Calculate subject totals, averages, grades,
-                    remarks and class positions automatically.
-                </p>
-            </div>
-            <!-- MARKS -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    📝
-                </div>
-                <h3>
-                    Marks & Assessments
-                </h3>
-                <p>
-                    Record CA assessments and examination scores
-                    for every subject with less manual calculation.
-                </p>
-            </div>
-            <!-- ATTENDANCE -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    📅
-                </div>
-                <h3>
-                    Attendance Tracking
-                </h3>
-                <p>
-                    Record attendance and automatically calculate
-                    present days, absent days and attendance rates.
-                </p>
-            </div>
-            <!-- REPORTS -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    📄
-                </div>
-                <h3>
-                    Professional Reports
-                </h3>
-                <p>
-                    Generate structured student reports with marks,
-                    grades, positions, attendance and comments.
-                </p>
-            </div>
-            <!-- OCR -->
-            <div class="feature-card">
-                <div class="feature-icon">
-                    📷
-                </div>
-                <h3>
-                    Score Sheet OCR
-                </h3>
-                <p>
-                    Upload score sheets and extract marks automatically
-                    with OCR technology, with review before saving.
-                </p>
-            </div>
-        </div>
-    </div>
-</section>
+        </section>
+    </main>
     <!-- ================================
-     LOGIN MODAL
-================================= -->
-<div
-    id="loginModal"
-    class="modal"
-    aria-hidden="true"
->
+         LOGIN MODAL
+    ================================= -->
     <div
-        class="modal-content"
-        role="dialog"
-        aria-modal="true"
-        aria-labelledby="loginTitle"
+        id="loginModal"
+        class="modal"
+        aria-hidden="true"
     >
-        <!-- CLOSE -->
-        <button
-            type="button"
-            class="close-btn"
-            onclick="closeLogin()"
-            aria-label="Close login"
+        <div
+            class="modal-content"
+            role="dialog"
+            aria-modal="true"
+            aria-labelledby="loginTitle"
         >
-            ×
-        </button>
-        <!-- LOGIN HEADER -->
-        <div class="login-header">
-            <div
-                class="login-logo"
-                aria-hidden="true"
-            >
-                CM
-            </div>
-            <h2 id="loginTitle">
-                Welcome Back
-            </h2>
-            <p>
-                Sign in to your ClassMark teacher account.
-            </p>
-        </div>
-        <!-- LOGIN FORM -->
-        <form
-            id="loginForm"
-            onsubmit="login(event)"
-        >
-            <label for="username">
-                Email Address
-            </label>
-            <input
-                type="email"
-                id="username"
-                name="email"
-                placeholder="teacher@example.com"
-                autocomplete="email"
-                required
-            >
-            <label for="password">
-                Password
-            </label>
-            <input
-                type="password"
-                id="password"
-                name="password"
-                placeholder="Enter your password"
-                autocomplete="current-password"
-                required
-            >
-            <button
-                type="submit"
-                class="primary-btn full-width"
-            >
-                Sign In to ClassMark
-            </button>
-        </form>
-        <!-- SECURITY NOTE -->
-        <p class="demo-note">
-            Your account is protected with secure authentication.
-        </p>
-    </div>
-</div>
-    <!-- ================================
-     ABOUT
-================================= -->
-<section
-    class="features"
-    id="about"
->
-    <div class="container">
-        <div class="section-heading">
-            <span class="hero-badge">
-                ABOUT CLASSMARK
-            </span>
-            <h2>
-                Built to Make Classroom
-                Management Simpler
-            </h2>
-            <p>
-                ClassMark is designed to help teachers spend less time
-                dealing with spreadsheets, manual calculations and
-                scattered classroom records — and more time focusing
-                on their students.
-            </p>
-        </div>
-    </div>
-</section>
-<!-- ================================
-     CONTACT / CTA
-================================= -->
-<section
-    class="features"
-    id="contact"
->
-    <div class="container">
-        <div class="section-heading">
-            <span class="hero-badge">
-                GET STARTED
-            </span>
-            <h2>
-                Ready to Manage Your Class Smarter?
-            </h2>
-            <p>
-                Sign in to ClassMark and start managing your students,
-                marks, attendance and academic results from one place.
-            </p>
-        </div>
-        <div class="hero-buttons">
+            <!-- CLOSE BUTTON -->
             <button
                 type="button"
-                class="primary-btn"
-                onclick="showLogin()"
+                class="close-btn"
+                onclick="closeLogin()"
+                aria-label="Close login"
             >
-                Teacher Login
+                ×
             </button>
-        </div>
-    </div>
-</section>
-<!-- ================================
-     FOOTER
-================================= -->
-<footer>
-    <div class="container footer-content">
-        <div>
-            <strong>
-                ClassMark
-            </strong>
-            <p>
-                Smart classroom and result management.
+            <!-- LOGIN HEADER -->
+            <div class="login-header">
+                <div
+                    class="login-logo"
+                    aria-hidden="true"
+                >
+                    CM
+                </div>
+                <h2 id="loginTitle">
+                    Welcome Back
+                </h2>
+                <p>
+                    Sign in to your ClassMark teacher account.
+                </p>
+            </div>
+            <!-- LOGIN FORM -->
+            <form
+                id="loginForm"
+                onsubmit="login(event)"
+            >
+                <label for="username">
+                    Email Address
+                </label>
+                <input
+                    type="email"
+                    id="username"
+                    name="email"
+                    placeholder="teacher@example.com"
+                    autocomplete="email"
+                    required
+                >
+                <label for="password">
+                    Password
+                </label>
+                <input
+                    type="password"
+                    id="password"
+                    name="password"
+                    placeholder="Enter your password"
+                    autocomplete="current-password"
+                    required
+                >
+                <button
+                    type="submit"
+                    class="primary-btn full-width"
+                >
+                    Sign In to ClassMark
+                </button>
+            </form>
+            <!-- SECURITY NOTE -->
+            <p class="demo-note">
+                Your account is protected with secure authentication.
             </p>
         </div>
-        <div>
-            <p>
-                © 2026 ClassMark. All rights reserved.
-            </p>
-        </div>
     </div>
-</footer>
+    <!-- ================================
+         FOOTER
+    ================================= -->
+    <footer>
+        <div class="container footer-content">
+            <div>
+                <strong>
+                    ClassMark
+                </strong>
+                <p>
+                    Smart classroom and result management.
+                </p>
+            </div>
+            <div>
+                <p>
+                    © 2026 ClassMark. All rights reserved.
+                </p>
+            </div>
+        </div>
+    </footer>
     <!-- ================================
          SUPABASE
     ================================= -->
