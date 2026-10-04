@@ -359,4 +359,383 @@ async function loadTeacherProfile() {
     }
 
 }
+// ==========================================
+// TEACHER DASHBOARD
+// ==========================================
+
+function showTeacherDashboard() {
+
+    const loginModal =
+        document.getElementById("loginModal");
+
+    if (loginModal) {
+
+        loginModal.classList.remove("active");
+
+        loginModal.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+    }
+
+
+    const existingDashboard =
+        document.getElementById(
+            "teacherDashboard"
+        );
+
+    if (existingDashboard) {
+
+        existingDashboard.remove();
+
+    }
+
+
+    const dashboard =
+        document.createElement("section");
+
+    dashboard.id =
+        "teacherDashboard";
+
+    dashboard.innerHTML = `
+
+        <div class="teacher-dashboard">
+
+            <div class="dashboard-topbar">
+
+                <div>
+                    <h2>Teacher Dashboard</h2>
+
+                    <p>
+                        Welcome back,
+                        <strong>
+                            ${teacherProfile?.full_name || "Teacher"}
+                        </strong>
+                    </p>
+                </div>
+
+                <button
+                    type="button"
+                    class="secondary-btn"
+                    onclick="logoutTeacher()"
+                >
+                    Logout
+                </button>
+
+            </div>
+
+
+            <div class="dashboard-welcome">
+
+                <span class="hero-badge">
+                    CLASSMARK WORKSPACE
+                </span>
+
+                <h1>
+                    ${teacherProfile?.school_name || "Your School"}
+                </h1>
+
+                <p>
+                    Class:
+                    <strong>
+                        ${teacherProfile?.class_name || "-"}
+                    </strong>
+
+                    &nbsp; | &nbsp;
+
+                    Session:
+                    <strong>
+                        ${teacherProfile?.session || "-"}
+                    </strong>
+
+                    &nbsp; | &nbsp;
+
+                    Term:
+                    <strong>
+                        ${teacherProfile?.term || "-"}
+                    </strong>
+                </p>
+
+            </div>
+
+
+            <div class="dashboard-cards">
+
+                <div class="dashboard-card">
+                    <span>👨‍🎓</span>
+                    <h3>Students</h3>
+                    <p>Manage your students.</p>
+                </div>
+
+
+                <div class="dashboard-card">
+                    <span>📚</span>
+                    <h3>Subjects</h3>
+                    <p>Manage class subjects.</p>
+                </div>
+
+
+                <div class="dashboard-card">
+                    <span>📝</span>
+                    <h3>Marks</h3>
+                    <p>Enter student assessments.</p>
+                </div>
+
+
+                <div class="dashboard-card">
+                    <span>📊</span>
+                    <h3>Results</h3>
+                    <p>Generate academic results.</p>
+                </div>
+
+            </div>
+
+        </div>
+
+    `;
+
+
+    document
+        .querySelector("main")
+        .appendChild(dashboard);
+
+
+    addDashboardStyles();
+
+}
+
+
+// ==========================================
+// LOGOUT TEACHER
+// ==========================================
+
+async function logoutTeacher() {
+
+    try {
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .auth
+                .signOut();
+
+
+        if (error) {
+
+            console.error(
+                "Logout error:",
+                error
+            );
+
+            alert(
+                "Unable to logout. Please try again."
+            );
+
+            return;
+        }
+
+
+        currentUser = null;
+
+        teacherProfile = null;
+
+
+        const dashboard =
+            document.getElementById(
+                "teacherDashboard"
+            );
+
+
+        if (dashboard) {
+
+            dashboard.remove();
+
+        }
+
+
+        console.log(
+            "Teacher logged out."
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected logout error:",
+            error
+        );
+
+    }
+
+}
+
+
+// ==========================================
+// DASHBOARD STYLES
+// ==========================================
+
+function addDashboardStyles() {
+
+    if (
+        document.getElementById(
+            "classmarkDashboardStyles"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const style =
+        document.createElement("style");
+
+
+    style.id =
+        "classmarkDashboardStyles";
+
+
+    style.textContent = `
+
+        .teacher-dashboard {
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 50px 20px 80px;
+        }
+
+
+        .dashboard-topbar {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            gap: 20px;
+            margin-bottom: 35px;
+        }
+
+
+        .dashboard-topbar h2 {
+            margin: 0 0 8px;
+        }
+
+
+        .dashboard-topbar p {
+            margin: 0;
+            opacity: 0.75;
+        }
+
+
+        .dashboard-welcome {
+            padding: 35px;
+            border-radius: 20px;
+            margin-bottom: 30px;
+            background:
+                linear-gradient(
+                    135deg,
+                    #0b1220,
+                    #111c32
+                );
+            border: 1px solid rgba(
+                212,
+                175,
+                55,
+                0.25
+            );
+        }
+
+
+        .dashboard-welcome h1 {
+            margin: 15px 0 10px;
+        }
+
+
+        .dashboard-welcome p {
+            margin: 0;
+            line-height: 1.7;
+        }
+
+
+        .dashboard-cards {
+            display: grid;
+            grid-template-columns:
+                repeat(4, 1fr);
+            gap: 20px;
+        }
+
+
+        .dashboard-card {
+            padding: 28px;
+            border-radius: 18px;
+            background: #111827;
+            border: 1px solid rgba(
+                255,
+                255,
+                255,
+                0.08
+            );
+            transition:
+                transform 0.2s ease,
+                border-color 0.2s ease;
+        }
+
+
+        .dashboard-card:hover {
+            transform: translateY(-4px);
+            border-color:
+                rgba(212, 175, 55, 0.5);
+        }
+
+
+        .dashboard-card span {
+            font-size: 28px;
+        }
+
+
+        .dashboard-card h3 {
+            margin: 16px 0 8px;
+        }
+
+
+        .dashboard-card p {
+            margin: 0;
+            opacity: 0.7;
+            line-height: 1.6;
+        }
+
+
+        @media (max-width: 850px) {
+
+            .dashboard-cards {
+                grid-template-columns:
+                    repeat(2, 1fr);
+            }
+
+        }
+
+
+        @media (max-width: 560px) {
+
+            .dashboard-topbar {
+                align-items: flex-start;
+                flex-direction: column;
+            }
+
+
+            .dashboard-welcome {
+                padding: 25px;
+            }
+
+
+            .dashboard-cards {
+                grid-template-columns: 1fr;
+            }
+
+        }
+
+    `;
+
+
+    document.head.appendChild(style);
+
+}
     
