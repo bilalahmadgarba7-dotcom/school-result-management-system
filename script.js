@@ -3,6 +3,7 @@
 // School Result Management System
 // ==========================================
 
+
 // ------------------------------------------
 // SUPABASE CONFIGURATION
 // ------------------------------------------
@@ -138,7 +139,9 @@ supabaseClient
 
         }
     );
-    // ==========================================
+
+
+// ==========================================
 // TEACHER LOGIN
 // ==========================================
 
@@ -216,9 +219,17 @@ async function login(event) {
 
         currentUser =
             data.user;
-            await loadTeacherProfile();
-            showTeacherDashboard();
-            
+
+
+        await loadTeacherProfile();
+
+
+        if (!teacherProfile) {
+            return;
+        }
+
+
+        showTeacherDashboard();
 
 
         console.log(
@@ -261,6 +272,8 @@ async function login(event) {
     }
 
 }
+
+
 // ==========================================
 // LOAD TEACHER PROFILE
 // ==========================================
@@ -359,6 +372,8 @@ async function loadTeacherProfile() {
     }
 
 }
+
+
 // ==========================================
 // TEACHER DASHBOARD
 // ==========================================
@@ -368,6 +383,7 @@ function showTeacherDashboard() {
     const loginModal =
         document.getElementById("loginModal");
 
+
     if (loginModal) {
 
         loginModal.classList.remove("active");
@@ -376,6 +392,7 @@ function showTeacherDashboard() {
             "aria-hidden",
             "true"
         );
+
     }
 
 
@@ -383,6 +400,7 @@ function showTeacherDashboard() {
         document.getElementById(
             "teacherDashboard"
         );
+
 
     if (existingDashboard) {
 
@@ -394,8 +412,10 @@ function showTeacherDashboard() {
     const dashboard =
         document.createElement("section");
 
+
     dashboard.id =
         "teacherDashboard";
+
 
     dashboard.innerHTML = `
 
@@ -404,15 +424,23 @@ function showTeacherDashboard() {
             <div class="dashboard-topbar">
 
                 <div>
-                    <h2>Teacher Dashboard</h2>
+
+                    <h2>
+                        Teacher Dashboard
+                    </h2>
 
                     <p>
                         Welcome back,
                         <strong>
-                            ${teacherProfile?.full_name || "Teacher"}
+                            ${escapeHTML(
+                                teacherProfile?.full_name ||
+                                "Teacher"
+                            )}
                         </strong>
                     </p>
+
                 </div>
+
 
                 <button
                     type="button"
@@ -431,29 +459,48 @@ function showTeacherDashboard() {
                     CLASSMARK WORKSPACE
                 </span>
 
+
                 <h1>
-                    ${teacherProfile?.school_name || "Your School"}
+                    ${escapeHTML(
+                        teacherProfile?.school_name ||
+                        "Your School"
+                    )}
                 </h1>
 
+
                 <p>
+
                     Class:
+
                     <strong>
-                        ${teacherProfile?.class_name || "-"}
+                        ${escapeHTML(
+                            teacherProfile?.class_name ||
+                            "-"
+                        )}
                     </strong>
 
                     &nbsp; | &nbsp;
 
                     Session:
+
                     <strong>
-                        ${teacherProfile?.session || "-"}
+                        ${escapeHTML(
+                            teacherProfile?.session ||
+                            "-"
+                        )}
                     </strong>
 
                     &nbsp; | &nbsp;
 
                     Term:
+
                     <strong>
-                        ${teacherProfile?.term || "-"}
+                        ${escapeHTML(
+                            teacherProfile?.term ||
+                            "-"
+                        )}
                     </strong>
+
                 </p>
 
             </div>
@@ -461,32 +508,98 @@ function showTeacherDashboard() {
 
             <div class="dashboard-cards">
 
-                <div class="dashboard-card">
-                    <span>👨‍🎓</span>
-                    <h3>Students</h3>
-                    <p>Manage your students.</p>
-                </div>
+
+                <!-- STUDENTS -->
+
+                <button
+                    type="button"
+                    class="dashboard-card dashboard-card-button"
+                    onclick="showStudents()"
+                >
+
+                    <span>
+                        👨‍🎓
+                    </span>
+
+                    <h3>
+                        Students
+                    </h3>
+
+                    <p>
+                        Add and manage your students.
+                    </p>
+
+                </button>
 
 
-                <div class="dashboard-card">
-                    <span>📚</span>
-                    <h3>Subjects</h3>
-                    <p>Manage class subjects.</p>
-                </div>
+                <!-- SUBJECTS -->
+
+                <button
+                    type="button"
+                    class="dashboard-card dashboard-card-button"
+                    onclick="showSubjectsComingSoon()"
+                >
+
+                    <span>
+                        📚
+                    </span>
+
+                    <h3>
+                        Subjects
+                    </h3>
+
+                    <p>
+                        Manage class subjects.
+                    </p>
+
+                </button>
 
 
-                <div class="dashboard-card">
-                    <span>📝</span>
-                    <h3>Marks</h3>
-                    <p>Enter student assessments.</p>
-                </div>
+                <!-- MARKS -->
+
+                <button
+                    type="button"
+                    class="dashboard-card dashboard-card-button"
+                    onclick="showMarksComingSoon()"
+                >
+
+                    <span>
+                        📝
+                    </span>
+
+                    <h3>
+                        Marks
+                    </h3>
+
+                    <p>
+                        Enter student assessments.
+                    </p>
+
+                </button>
 
 
-                <div class="dashboard-card">
-                    <span>📊</span>
-                    <h3>Results</h3>
-                    <p>Generate academic results.</p>
-                </div>
+                <!-- RESULTS -->
+
+                <button
+                    type="button"
+                    class="dashboard-card dashboard-card-button"
+                    onclick="showResultsComingSoon()"
+                >
+
+                    <span>
+                        📊
+                    </span>
+
+                    <h3>
+                        Results
+                    </h3>
+
+                    <p>
+                        Generate academic results.
+                    </p>
+
+                </button>
+
 
             </div>
 
@@ -501,6 +614,37 @@ function showTeacherDashboard() {
 
 
     addDashboardStyles();
+
+}
+
+
+// ==========================================
+// COMING SOON ACTIONS
+// ==========================================
+
+function showSubjectsComingSoon() {
+
+    alert(
+        "Subjects Management will be added next."
+    );
+
+}
+
+
+function showMarksComingSoon() {
+
+    alert(
+        "Marks Management will be added soon."
+    );
+
+}
+
+
+function showResultsComingSoon() {
+
+    alert(
+        "Results Management will be added soon."
+    );
 
 }
 
@@ -599,115 +743,223 @@ function addDashboardStyles() {
     style.textContent = `
 
         .teacher-dashboard {
+
             max-width: 1200px;
+
             margin: 0 auto;
-            padding: 50px 20px 80px;
+
+            padding:
+                50px 20px 80px;
+
         }
 
 
         .dashboard-topbar {
+
             display: flex;
-            justify-content: space-between;
+
+            justify-content:
+                space-between;
+
             align-items: center;
+
             gap: 20px;
+
             margin-bottom: 35px;
+
         }
 
 
         .dashboard-topbar h2 {
-            margin: 0 0 8px;
+
+            margin:
+                0 0 8px;
+
         }
 
 
         .dashboard-topbar p {
+
             margin: 0;
+
             opacity: 0.75;
+
         }
 
 
         .dashboard-welcome {
+
             padding: 35px;
+
             border-radius: 20px;
+
             margin-bottom: 30px;
+
             background:
                 linear-gradient(
                     135deg,
                     #0b1220,
                     #111c32
                 );
-            border: 1px solid rgba(
-                212,
-                175,
-                55,
-                0.25
-            );
+
+            border:
+                1px solid
+                rgba(
+                    212,
+                    175,
+                    55,
+                    0.25
+                );
+
         }
 
 
         .dashboard-welcome h1 {
-            margin: 15px 0 10px;
+
+            margin:
+                15px 0 10px;
+
         }
 
 
         .dashboard-welcome p {
+
             margin: 0;
+
             line-height: 1.7;
+
         }
 
 
         .dashboard-cards {
+
             display: grid;
+
             grid-template-columns:
                 repeat(4, 1fr);
+
             gap: 20px;
+
         }
 
 
         .dashboard-card {
+
             padding: 28px;
+
             border-radius: 18px;
-            background: #111827;
-            border: 1px solid rgba(
-                255,
-                255,
-                255,
-                0.08
-            );
+
+            background:
+                #111827;
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+
             transition:
                 transform 0.2s ease,
-                border-color 0.2s ease;
+                border-color 0.2s ease,
+                box-shadow 0.2s ease;
+
         }
 
 
         .dashboard-card:hover {
-            transform: translateY(-4px);
+
+            transform:
+                translateY(-4px);
+
             border-color:
-                rgba(212, 175, 55, 0.5);
+                rgba(
+                    212,
+                    175,
+                    55,
+                    0.5
+                );
+
+            box-shadow:
+                0 12px 30px
+                rgba(
+                    0,
+                    0,
+                    0,
+                    0.18
+                );
+
+        }
+
+
+        .dashboard-card-button {
+
+            width: 100%;
+
+            text-align: left;
+
+            color: inherit;
+
+            font: inherit;
+
+            cursor: pointer;
+
+            appearance: none;
+
+        }
+
+
+        .dashboard-card-button:focus-visible {
+
+            outline:
+                3px solid
+                rgba(
+                    212,
+                    175,
+                    55,
+                    0.7
+                );
+
+            outline-offset: 3px;
+
         }
 
 
         .dashboard-card span {
+
             font-size: 28px;
+
         }
 
 
         .dashboard-card h3 {
-            margin: 16px 0 8px;
+
+            margin:
+                16px 0 8px;
+
         }
 
 
         .dashboard-card p {
+
             margin: 0;
+
             opacity: 0.7;
+
             line-height: 1.6;
+
         }
 
 
         @media (max-width: 850px) {
 
             .dashboard-cards {
+
                 grid-template-columns:
                     repeat(2, 1fr);
+
             }
 
         }
@@ -716,18 +968,28 @@ function addDashboardStyles() {
         @media (max-width: 560px) {
 
             .dashboard-topbar {
-                align-items: flex-start;
-                flex-direction: column;
+
+                align-items:
+                    flex-start;
+
+                flex-direction:
+                    column;
+
             }
 
 
             .dashboard-welcome {
+
                 padding: 25px;
+
             }
 
 
             .dashboard-cards {
-                grid-template-columns: 1fr;
+
+                grid-template-columns:
+                    1fr;
+
             }
 
         }
@@ -738,6 +1000,8 @@ function addDashboardStyles() {
     document.head.appendChild(style);
 
 }
+
+
 // ==========================================
 // STUDENTS MANAGEMENT
 // ==========================================
@@ -745,46 +1009,75 @@ function addDashboardStyles() {
 async function showStudents() {
 
     if (!currentUser) {
-        alert("Please login first.");
+
+        alert(
+            "Please login first."
+        );
+
         return;
     }
+
 
     const dashboard =
-        document.getElementById("teacherDashboard");
+        document.getElementById(
+            "teacherDashboard"
+        );
+
 
     if (!dashboard) {
+
         return;
+
     }
+
 
     const existing =
-        document.getElementById("studentsSection");
+        document.getElementById(
+            "studentsSection"
+        );
+
 
     if (existing) {
+
         existing.remove();
+
     }
+
 
     const section =
         document.createElement("section");
 
-    section.id = "studentsSection";
 
-    section.className = "students-section";
+    section.id =
+        "studentsSection";
+
+
+    section.className =
+        "students-section";
+
 
     section.innerHTML = `
 
         <div class="students-header">
 
             <div>
+
                 <span class="hero-badge">
                     STUDENT MANAGEMENT
                 </span>
 
-                <h2>Students</h2>
+
+                <h2>
+                    Students
+                </h2>
+
 
                 <p>
                     Add and manage students in your class.
                 </p>
+
             </div>
+
 
             <button
                 type="button"
@@ -810,7 +1103,9 @@ async function showStudents() {
 
                 <div class="form-grid">
 
+
                     <div>
+
                         <label for="studentName">
                             Full Name
                         </label>
@@ -821,10 +1116,12 @@ async function showStudents() {
                             placeholder="Enter student's full name"
                             required
                         >
+
                     </div>
 
 
                     <div>
+
                         <label for="studentGender">
                             Gender
                         </label>
@@ -833,6 +1130,7 @@ async function showStudents() {
                             id="studentGender"
                             required
                         >
+
                             <option value="">
                                 Select gender
                             </option>
@@ -844,11 +1142,14 @@ async function showStudents() {
                             <option value="Female">
                                 Female
                             </option>
+
                         </select>
+
                     </div>
 
 
                     <div>
+
                         <label for="studentDob">
                             Date of Birth
                         </label>
@@ -857,10 +1158,12 @@ async function showStudents() {
                             type="date"
                             id="studentDob"
                         >
+
                     </div>
 
 
                     <div>
+
                         <label for="studentAdmission">
                             Admission Number
                         </label>
@@ -870,10 +1173,12 @@ async function showStudents() {
                             id="studentAdmission"
                             placeholder="e.g. CM/001"
                         >
+
                     </div>
 
 
                     <div>
+
                         <label for="studentClass">
                             Class
                         </label>
@@ -883,10 +1188,12 @@ async function showStudents() {
                             id="studentClass"
                             required
                         >
+
                     </div>
 
 
                     <div>
+
                         <label for="studentSession">
                             Academic Session
                         </label>
@@ -897,10 +1204,12 @@ async function showStudents() {
                             placeholder="e.g. 2026/2027"
                             required
                         >
+
                     </div>
 
 
                     <div>
+
                         <label for="studentTerm">
                             Term
                         </label>
@@ -909,6 +1218,7 @@ async function showStudents() {
                             id="studentTerm"
                             required
                         >
+
                             <option value="">
                                 Select term
                             </option>
@@ -924,8 +1234,11 @@ async function showStudents() {
                             <option value="Third Term">
                                 Third Term
                             </option>
+
                         </select>
+
                     </div>
+
 
                 </div>
 
@@ -945,6 +1258,7 @@ async function showStudents() {
                     >
                         Cancel
                     </button>
+
 
                     <button
                         type="submit"
@@ -973,16 +1287,20 @@ async function showStudents() {
 
     `;
 
+
     dashboard.appendChild(section);
+
+
+    addStudentsStyles();
+
 
     await loadStudents();
 
-    addStudentsStyles();
 }
 
 
 // ==========================================
-// OPEN STUDENT FORM
+// STUDENT FORM
 // ==========================================
 
 function openStudentForm() {
@@ -992,32 +1310,41 @@ function openStudentForm() {
             "studentFormContainer"
         );
 
+
     if (!formContainer) {
+
         return;
+
     }
+
 
     document
         .getElementById("studentForm")
         .reset();
+
 
     document
         .getElementById("studentClass")
         .value =
             teacherProfile?.class_name || "";
 
+
     document
         .getElementById("studentSession")
         .value =
             teacherProfile?.session || "";
+
 
     document
         .getElementById("studentTerm")
         .value =
             teacherProfile?.term || "";
 
+
     document
         .getElementById("studentFormError")
         .textContent = "";
+
 
     formContainer.style.display =
         "block";
@@ -1025,9 +1352,9 @@ function openStudentForm() {
 }
 
 
-// ==========================================
+// ------------------------------------------
 // CLOSE STUDENT FORM
-// ==========================================
+// ------------------------------------------
 
 function closeStudentForm() {
 
@@ -1035,6 +1362,7 @@ function closeStudentForm() {
         document.getElementById(
             "studentFormContainer"
         );
+
 
     if (formContainer) {
 
@@ -1054,6 +1382,7 @@ async function saveStudent(event) {
 
     event.preventDefault();
 
+
     if (!currentUser) {
 
         showStudentFormError(
@@ -1070,21 +1399,27 @@ async function saveStudent(event) {
             .value
             .trim();
 
+
     const gender =
         document
             .getElementById("studentGender")
             .value;
 
+
     const dateOfBirth =
         document
             .getElementById("studentDob")
-            .value || null;
+            .value ||
+        null;
+
 
     const admissionNumber =
         document
             .getElementById("studentAdmission")
             .value
-            .trim() || null;
+            .trim() ||
+        null;
+
 
     const className =
         document
@@ -1092,11 +1427,13 @@ async function saveStudent(event) {
             .value
             .trim();
 
+
     const session =
         document
             .getElementById("studentSession")
             .value
             .trim();
+
 
     const term =
         document
@@ -1179,6 +1516,7 @@ async function saveStudent(event) {
                 .from("students")
                 .insert([
                     {
+
                         teacher_id:
                             currentUser.id,
 
@@ -1202,6 +1540,7 @@ async function saveStudent(event) {
 
                         term:
                             term
+
                     }
                 ]);
 
@@ -1223,7 +1562,9 @@ async function saveStudent(event) {
 
         closeStudentForm();
 
+
         await loadStudents();
+
 
     } catch (error) {
 
@@ -1235,6 +1576,7 @@ async function saveStudent(event) {
         showStudentFormError(
             "Something went wrong. Please try again."
         );
+
 
     } finally {
 
@@ -1263,8 +1605,11 @@ async function loadStudents() {
             "studentsList"
         );
 
+
     if (!list || !currentUser) {
+
         return;
+
     }
 
 
@@ -1306,10 +1651,13 @@ async function loadStudents() {
                 error
             );
 
+
             list.innerHTML = `
+
                 <p class="form-error">
                     Unable to load students.
                 </p>
+
             `;
 
             return;
@@ -1319,6 +1667,7 @@ async function loadStudents() {
         renderStudents(
             data || []
         );
+
 
     } catch (error) {
 
@@ -1343,8 +1692,11 @@ function renderStudents(students) {
             "studentsList"
         );
 
+
     if (!list) {
+
         return;
+
     }
 
 
@@ -1384,16 +1736,39 @@ function renderStudents(students) {
                 <thead>
 
                     <tr>
-                        <th>#</th>
-                        <th>Student</th>
-                        <th>Gender</th>
-                        <th>Admission No.</th>
-                        <th>Class</th>
-                        <th>Session</th>
-                        <th>Term</th>
+
+                        <th>
+                            #
+                        </th>
+
+                        <th>
+                            Student
+                        </th>
+
+                        <th>
+                            Gender
+                        </th>
+
+                        <th>
+                            Admission No.
+                        </th>
+
+                        <th>
+                            Class
+                        </th>
+
+                        <th>
+                            Session
+                        </th>
+
+                        <th>
+                            Term
+                        </th>
+
                     </tr>
 
                 </thead>
+
 
                 <tbody>
 
@@ -1407,21 +1782,29 @@ function renderStudents(students) {
                                     ${index + 1}
                                 </td>
 
+
                                 <td>
+
                                     <strong>
                                         ${escapeHTML(
                                             student.full_name
                                         )}
                                     </strong>
+
                                 </td>
 
+
                                 <td>
+
                                     ${escapeHTML(
                                         student.gender
                                     )}
+
                                 </td>
 
+
                                 <td>
+
                                     ${
                                         student.admission_number
                                             ? escapeHTML(
@@ -1429,24 +1812,34 @@ function renderStudents(students) {
                                             )
                                             : "—"
                                     }
+
                                 </td>
 
+
                                 <td>
+
                                     ${escapeHTML(
                                         student.class_name
                                     )}
+
                                 </td>
 
+
                                 <td>
+
                                     ${escapeHTML(
                                         student.session
                                     )}
+
                                 </td>
 
+
                                 <td>
+
                                     ${escapeHTML(
                                         student.term
                                     )}
+
                                 </td>
 
                             </tr>
@@ -1477,6 +1870,7 @@ function showStudentFormError(message) {
             "studentFormError"
         );
 
+
     if (error) {
 
         error.textContent =
@@ -1488,17 +1882,515 @@ function showStudentFormError(message) {
 
 
 // ==========================================
+// STUDENTS STYLES
+// ==========================================
+
+function addStudentsStyles() {
+
+    if (
+        document.getElementById(
+            "classmarkStudentsStyles"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const style =
+        document.createElement("style");
+
+
+    style.id =
+        "classmarkStudentsStyles";
+
+
+    style.textContent = `
+
+        .students-section {
+
+            margin-top: 35px;
+
+            padding:
+                30px;
+
+            border-radius:
+                20px;
+
+            background:
+                #0f172a;
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+
+        }
+
+
+        .students-header {
+
+            display:
+                flex;
+
+            justify-content:
+                space-between;
+
+            align-items:
+                center;
+
+            gap:
+                20px;
+
+            margin-bottom:
+                30px;
+
+        }
+
+
+        .students-header h2 {
+
+            margin:
+                15px 0 8px;
+
+        }
+
+
+        .students-header p {
+
+            margin:
+                0;
+
+            opacity:
+                0.7;
+
+        }
+
+
+        .student-form-container {
+
+            margin-bottom:
+                30px;
+
+            padding:
+                25px;
+
+            border-radius:
+                18px;
+
+            background:
+                #111827;
+
+            border:
+                1px solid
+                rgba(
+                    212,
+                    175,
+                    55,
+                    0.2
+                );
+
+        }
+
+
+        .form-grid {
+
+            display:
+                grid;
+
+            grid-template-columns:
+                repeat(2, 1fr);
+
+            gap:
+                20px;
+
+        }
+
+
+        .form-grid > div {
+
+            display:
+                flex;
+
+            flex-direction:
+                column;
+
+            gap:
+                8px;
+
+        }
+
+
+        .form-grid label {
+
+            font-weight:
+                600;
+
+        }
+
+
+        .form-grid input,
+        .form-grid select {
+
+            width:
+                100%;
+
+            padding:
+                13px 14px;
+
+            border-radius:
+                10px;
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.12
+                );
+
+            background:
+                #0b1220;
+
+            color:
+                #ffffff;
+
+            font: inherit;
+
+            box-sizing:
+                border-box;
+
+        }
+
+
+        .form-grid input:focus,
+        .form-grid select:focus {
+
+            outline:
+                none;
+
+            border-color:
+                #d4af37;
+
+            box-shadow:
+                0 0 0 3px
+                rgba(
+                    212,
+                    175,
+                    55,
+                    0.12
+                );
+
+        }
+
+
+        .form-actions {
+
+            display:
+                flex;
+
+            justify-content:
+                flex-end;
+
+            gap:
+                12px;
+
+            margin-top:
+                25px;
+
+        }
+
+
+        .form-error {
+
+            margin-top:
+                15px;
+
+            color:
+                #ff8a8a;
+
+            font-size:
+                14px;
+
+        }
+
+
+        .students-list {
+
+            width:
+                100%;
+
+        }
+
+
+        .students-loading {
+
+            padding:
+                30px;
+
+            text-align:
+                center;
+
+            opacity:
+                0.7;
+
+        }
+
+
+        .empty-students {
+
+            padding:
+                50px 20px;
+
+            text-align:
+                center;
+
+            border-radius:
+                16px;
+
+            background:
+                #111827;
+
+            border:
+                1px dashed
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.15
+                );
+
+        }
+
+
+        .empty-icon {
+
+            font-size:
+                42px;
+
+            margin-bottom:
+                12px;
+
+        }
+
+
+        .empty-students h3 {
+
+            margin:
+                0 0 8px;
+
+        }
+
+
+        .empty-students p {
+
+            margin:
+                0;
+
+            opacity:
+                0.65;
+
+        }
+
+
+        .students-table-wrapper {
+
+            width:
+                100%;
+
+            overflow-x:
+                auto;
+
+            border-radius:
+                16px;
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+
+        }
+
+
+        .students-table {
+
+            width:
+                100%;
+
+            min-width:
+                760px;
+
+            border-collapse:
+                collapse;
+
+            background:
+                #111827;
+
+        }
+
+
+        .students-table th {
+
+            padding:
+                15px;
+
+            text-align:
+                left;
+
+            background:
+                #0b1220;
+
+            color:
+                #d4af37;
+
+            font-size:
+                13px;
+
+            text-transform:
+                uppercase;
+
+            letter-spacing:
+                0.04em;
+
+        }
+
+
+        .students-table td {
+
+            padding:
+                15px;
+
+            border-top:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.06
+                );
+
+            white-space:
+                nowrap;
+
+        }
+
+
+        .students-table tbody tr:hover {
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.025
+                );
+
+        }
+
+
+        @media (max-width: 700px) {
+
+            .students-section {
+
+                padding:
+                    20px;
+
+            }
+
+
+            .students-header {
+
+                align-items:
+                    flex-start;
+
+                flex-direction:
+                    column;
+
+            }
+
+
+            .students-header .primary-btn {
+
+                width:
+                    100%;
+
+            }
+
+
+            .form-grid {
+
+                grid-template-columns:
+                    1fr;
+
+            }
+
+
+            .form-actions {
+
+                flex-direction:
+                    column;
+
+            }
+
+
+            .form-actions button {
+
+                width:
+                    100%;
+
+            }
+
+        }
+
+    `;
+
+
+    document.head.appendChild(style);
+
+}
+
+
+// ==========================================
 // HTML SAFETY
 // ==========================================
 
 function escapeHTML(value) {
 
     return String(value ?? "")
-        .replace(/&/g, "&amp;")
-        .replace(/</g, "&lt;")
-        .replace(/>/g, "&gt;")
-        .replace(/"/g, "&quot;")
-        .replace(/'/g, "&#039;");
+
+        .replace(
+            /&/g,
+            "&amp;"
+        )
+
+        .replace(
+            /</g,
+            "&lt;"
+        )
+
+        .replace(
+            />/g,
+            "&gt;"
+        )
+
+        .replace(
+            /"/g,
+            "&quot;"
+        )
+
+        .replace(
+            /'/g,
+            "&#039;"
+        );
 
 }
-    
