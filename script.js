@@ -1,7 +1,13 @@
 console.log("ClassMark script loaded");
 
 /* =========================================================
-   CLASSMARK — SUPABASE CONFIGURATION
+   CLASSMARK | SCHOOL RESULT MANAGEMENT
+   MAIN JAVASCRIPT
+   ========================================================= */
+
+
+/* =========================================================
+   1. SUPABASE CONNECTION
    ========================================================= */
 
 const SUPABASE_URL =
@@ -16,89 +22,82 @@ const supabaseClient =
         SUPABASE_PUBLIC_KEY
     );
 
+
 /* =========================================================
-   GLOBAL STATE
+   2. GLOBAL STATE
    ========================================================= */
 
 let currentUser = null;
 let teacherProfile = null;
+
 let studentsCache = [];
+let subjectsCache = [];
+
 
 /* =========================================================
-   INITIALIZATION
-   ========================================================= */
-
-document.addEventListener("DOMContentLoaded", () => {
-    initializeClassMark();
-});
-
-async function initializeClassMark() {
-    setupModalEvents();
-    await checkAuthSession();
-}
-
-/* =========================================================
-   LOGIN MODAL
+   3. LOGIN MODAL
    ========================================================= */
 
 function showLogin() {
-    const modal =
-        document.getElementById("loginModal");
+    const modal = document.getElementById("loginModal");
 
-    if (!modal) {
-        console.error("Login modal not found.");
-        return;
+    if (modal) {
+        modal.classList.add("active");
+        modal.setAttribute("aria-hidden", "false");
+
+        setTimeout(() => {
+            const username =
+                document.getElementById("username");
+
+            if (username) {
+                username.focus();
+            }
+        }, 100);
     }
-
-    modal.classList.add("active");
-    modal.setAttribute("aria-hidden", "false");
-
-    setTimeout(() => {
-        const usernameInput =
-            document.getElementById("username");
-
-        if (usernameInput) {
-            usernameInput.focus();
-        }
-    }, 100);
 }
+
 
 function closeLogin() {
+    const modal = document.getElementById("loginModal");
+
+    if (modal) {
+        modal.classList.remove("active");
+        modal.setAttribute("aria-hidden", "true");
+    }
+}
+
+
+/* Close modal when clicking outside */
+
+document.addEventListener("click", function (event) {
     const modal =
         document.getElementById("loginModal");
 
-    if (!modal) return;
+    if (
+        modal &&
+        event.target === modal
+    ) {
+        closeLogin();
+    }
+});
 
-    modal.classList.remove("active");
-    modal.setAttribute("aria-hidden", "true");
-}
 
-function setupModalEvents() {
-    const modal =
-        document.getElementById("loginModal");
+/* Close modal with Escape */
 
-    if (!modal) return;
+document.addEventListener("keydown", function (event) {
+    if (event.key === "Escape") {
+        closeLogin();
+    }
+});
 
-    modal.addEventListener("click", (event) => {
-        if (event.target === modal) {
-            closeLogin();
-        }
-    });
-
-    document.addEventListener("keydown", (event) => {
-        if (event.key === "Escape") {
-            closeLogin();
-        }
-    });
-}
 
 /* =========================================================
-   LEARN MORE
+   4. LEARN MORE
    ========================================================= */
 
 function learnMore() {
     const featuresSection =
-        document.getElementById("features");
+        document.querySelector(".features");
 
     if (featuresSection) {
         featuresSection.scrollIntoView({
@@ -107,8 +106,86 @@ function learnMore() {
     }
 }
 
+
 /* =========================================================
-   AUTH SESSION
+   5. LOGIN / AUTHENTICATION
+   ========================================================= */
+
+async function login(event) {
+    event.preventDefault();
+
+    const username =
+        document.getElementById("username");
+
+    const password =
+        document.getElementById("password");
+
+    if (!username || !password) {
+        alert("Login form could not be loaded.");
+        return;
+    }
+
+    const email =
+        username.value.trim();
+
+    const userPassword =
+        password.value.trim();
+
+    if (!email || !userPassword) {
+        alert(
+            "Please enter your email address and password."
+        );
+        return;
+    }
+
+    try {
+        const {
+            data,
+            error
+        } =
+            await supabaseClient.auth.signInWithPassword({
+                email: email,
+                password: userPassword
+            });
+
+        if (error) {
+            console.error(
+                "Login error:",
+                error
+            );
+
+            alert(
+                "Login failed: " +
+                error.message
+            );
+
+            return;
+        }
+
+        currentUser =
+            data.user;
+
+        await loadTeacherProfile();
+
+        closeLogin();
+
+        showTeacherDashboard();
+
+    } catch (error) {
+        console.error(
+            "Unexpected login error:",
+            error
+        );
+
+        alert(
+            "Something went wrong while signing in."
+        );
+    }
+}
+
+
+/* =========================================================
+   6. AUTH SESSION
    ========================================================= */
 
 async function checkAuthSession() {
@@ -116,240 +193,77 @@ async function checkAuthSession() {
         const {
             data,
             error
-        } = await supabaseClient.auth.getSession();
+        } =
+            await supabaseClient.auth.getSession();
 
         if (error) {
             console.error(
                 "Session error:",
-                error.message
+                error
             );
+
             return;
         }
 
-        if (data && data.session) {
-            currentUser = data.session.user;
+        if (
+            data &&
+            data.session &&
+            data.session.user
+        ) {
+            currentUser =
+                data.session.user;
 
-            await loadTeacherProfile(
-                currentUser
-            );
+            await loadTeacherProfile();
 
-            showTeacherDashboard(
-                currentUser
-            );
+            showTeacherDashboard();
         }
+
     } catch (error) {
         console.error(
-            "Authentication check failed:",
+            "Auth check error:",
             error
         );
     }
 }
 
-/* =========================================================
-   AUTH STATE LISTENER
-   ========================================================= */
+
+/* Listen for authentication changes */
 
 supabaseClient.auth.onAuthStateChange(
-    async (event, session) => {
+    async function (event, session) {
 
         console.log(
             "Auth event:",
             event
         );
 
-        if (session && session.user) {
-
+        if (
+            session &&
+            session.user
+        ) {
             currentUser =
                 session.user;
 
-            await loadTeacherProfile(
-                currentUser
-            );
+            await loadTeacherProfile();
 
-            showTeacherDashboard(
-                currentUser
-            );
+            showTeacherDashboard();
 
         } else {
 
             currentUser = null;
             teacherProfile = null;
-            studentsCache = [];
-
-            showLandingPage();
         }
     }
 );
 
-/* =========================================================
-   TEACHER LOGIN
-   ========================================================= */
-
-async function login(event) {
-
-    event.preventDefault();
-
-    const emailInput =
-        document.getElementById("username");
-
-    const passwordInput =
-        document.getElementById("password");
-
-    const submitButton =
-        document.querySelector(
-            "#loginForm button[type='submit']"
-        );
-
-    if (!emailInput || !passwordInput) {
-
-        alert(
-            "Login form could not be loaded."
-        );
-
-        return;
-    }
-
-    const email =
-        emailInput.value.trim();
-
-    const password =
-        passwordInput.value;
-
-    if (!email || !password) {
-
-        alert(
-            "Please enter your email and password."
-        );
-
-        return;
-    }
-
-    if (submitButton) {
-
-        submitButton.disabled = true;
-
-        submitButton.textContent =
-            "Signing In...";
-    }
-
-    try {
-
-        const {
-            data,
-            error
-        } =
-            await supabaseClient.auth
-                .signInWithPassword({
-                    email: email,
-                    password: password
-                });
-
-        if (error) {
-            throw error;
-        }
-
-        if (!data || !data.user) {
-
-            throw new Error(
-                "Login was not completed."
-            );
-        }
-
-        currentUser =
-            data.user;
-
-        await loadTeacherProfile(
-            currentUser
-        );
-
-        closeLogin();
-
-        showTeacherDashboard(
-            currentUser
-        );
-
-    } catch (error) {
-
-        console.error(
-            "Login error:",
-            error
-        );
-
-        alert(
-            getLoginErrorMessage(error)
-        );
-
-    } finally {
-
-        if (submitButton) {
-
-            submitButton.disabled = false;
-
-            submitButton.textContent =
-                "Sign In to ClassMark";
-        }
-    }
-}
 
 /* =========================================================
-   LOGIN ERROR MESSAGES
+   7. LOAD TEACHER PROFILE
    ========================================================= */
 
-function getLoginErrorMessage(error) {
+async function loadTeacherProfile() {
 
-    const message =
-        error?.message?.toLowerCase() || "";
-
-    if (
-        message.includes(
-            "invalid login credentials"
-        )
-    ) {
-        return (
-            "Invalid email or password. " +
-            "Please check your details and try again."
-        );
-    }
-
-    if (
-        message.includes(
-            "email not confirmed"
-        )
-    ) {
-        return (
-            "Your email address has not been confirmed yet."
-        );
-    }
-
-    if (
-        message.includes(
-            "too many requests"
-        )
-    ) {
-        return (
-            "Too many login attempts. " +
-            "Please wait a moment and try again."
-        );
-    }
-
-    return (
-        error?.message ||
-        "Unable to sign in. Please try again."
-    );
-}
-
-/* =========================================================
-   LOAD TEACHER PROFILE
-   ========================================================= */
-
-async function loadTeacherProfile(user) {
-
-    if (!user || !user.id) {
-
-        console.error(
-            "No authenticated user available."
-        );
-
+    if (!currentUser) {
         return null;
     }
 
@@ -361,10 +275,11 @@ async function loadTeacherProfile(user) {
         } =
             await supabaseClient
                 .from("Teacher")
-                .select(
-                    "id, full_name, phone, username, email, school_name, class_name, session, term"
+                .select("*")
+                .eq(
+                    "id",
+                    currentUser.id
                 )
-                .eq("id", user.id)
                 .single();
 
         if (error) {
@@ -382,28 +297,22 @@ async function loadTeacherProfile(user) {
         teacherProfile =
             data;
 
-        console.log(
-            "Teacher profile loaded:",
-            teacherProfile
-        );
-
-        return teacherProfile;
+        return data;
 
     } catch (error) {
 
         console.error(
-            "Unable to load teacher profile:",
+            "Unexpected teacher profile error:",
             error
         );
-
-        teacherProfile = null;
 
         return null;
     }
 }
 
+
 /* =========================================================
-   LOGOUT
+   8. LOGOUT
    ========================================================= */
 
 async function logout() {
@@ -416,82 +325,76 @@ async function logout() {
             await supabaseClient.auth.signOut();
 
         if (error) {
-            throw error;
+            console.error(
+                "Logout error:",
+                error
+            );
+
+            alert(
+                "Unable to sign out."
+            );
+
+            return;
         }
 
         currentUser = null;
         teacherProfile = null;
-        studentsCache = [];
 
-        showLandingPage();
+        studentsCache = [];
+        subjectsCache = [];
+
+        const dashboard =
+            document.getElementById(
+                "teacherDashboard"
+            );
+
+        if (dashboard) {
+            dashboard.remove();
+        }
+
+        location.reload();
 
     } catch (error) {
 
         console.error(
-            "Logout error:",
+            "Unexpected logout error:",
             error
-        );
-
-        alert(
-            "Unable to sign out. Please try again."
         );
     }
 }
 
+
 /* =========================================================
-   TEACHER DASHBOARD
+   9. TEACHER DASHBOARD
    ========================================================= */
 
-function showTeacherDashboard(user) {
-
-    hideLandingPage();
+function showTeacherDashboard() {
 
     let dashboard =
         document.getElementById(
             "teacherDashboard"
         );
 
-    if (!dashboard) {
-
-        dashboard =
-            document.createElement("div");
-
-        dashboard.id =
-            "teacherDashboard";
-
-        document.body.appendChild(
-            dashboard
-        );
+    if (dashboard) {
+        dashboard.remove();
     }
 
-    const profile =
-        teacherProfile || {};
+    dashboard =
+        document.createElement("div");
 
-    const displayName =
-        profile.full_name ||
-        getUserDisplayName(user);
+    dashboard.id =
+        "teacherDashboard";
 
-    const schoolName =
-        profile.school_name ||
-        "School not configured";
-
-    const className =
-        profile.class_name ||
-        "Class not configured";
-
-    const session =
-        profile.session ||
-        "Session not configured";
-
-    const term =
-        profile.term ||
-        "Term not configured";
+    dashboard.className =
+        "teacher-dashboard";
 
     dashboard.innerHTML = `
 
         <div class="dashboard-shell">
 
-            <header class="dashboard-topbar">
+            <!-- SIDEBAR -->
+
+            <aside class="dashboard-sidebar">
 
                 <div class="dashboard-brand">
 
@@ -505,818 +408,512 @@ function showTeacherDashboard(user) {
                         </strong>
 
                         <span>
-                            Teacher Dashboard
+                            Teacher Portal
                         </span>
                     </div>
 
                 </div>
 
-                <div class="dashboard-user">
 
-                    <div class="dashboard-user-info">
-
-                        <strong>
-                            ${escapeHTML(displayName)}
-                        </strong>
-
-                        <span>
-                            ${escapeHTML(
-                                profile.email ||
-                                user?.email ||
-                                ""
-                            )}
-                        </span>
-
-                    </div>
+                <nav class="dashboard-nav">
 
                     <button
                         type="button"
-                        class="dashboard-logout"
-                        onclick="logout()"
+                        class="dashboard-nav-item active"
+                        onclick="showDashboardSection('overview')"
                     >
-                        Logout
+                        <span>⌂</span>
+                        Overview
                     </button>
 
-                </div>
 
-            </header>
+                    <button
+                        type="button"
+                        class="dashboard-nav-item"
+                        onclick="showDashboardSection('students')"
+                    >
+                        <span>👨‍🎓</span>
+                        Students
+                    </button>
 
-            <div class="dashboard-layout">
 
-                <aside class="dashboard-sidebar">
+                    <button
+                        type="button"
+                        class="dashboard-nav-item"
+                        onclick="showDashboardSection('subjects')"
+                    >
+                        <span>📚</span>
+                        Subjects
+                    </button>
 
-                    <div class="sidebar-profile">
 
-                        <div class="profile-avatar">
-                            ${escapeHTML(
-                                getInitials(displayName)
-                            )}
-                        </div>
+                    <button
+                        type="button"
+                        class="dashboard-nav-item"
+                        onclick="showDashboardSection('marks')"
+                    >
+                        <span>📝</span>
+                        Enter Marks
+                    </button>
 
-                        <strong>
-                            ${escapeHTML(displayName)}
-                        </strong>
 
-                        <span>
-                            ${escapeHTML(className)}
-                        </span>
+                    <button
+                        type="button"
+                        class="dashboard-nav-item"
+                        onclick="showDashboardSection('ocr')"
+                    >
+                        <span>📷</span>
+                        Score Sheet OCR
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="dashboard-nav-item"
+                        onclick="showDashboardSection('attendance')"
+                    >
+                        <span>📅</span>
+                        Attendance
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="dashboard-nav-item"
+                        onclick="showDashboardSection('results')"
+                    >
+                        <span>📊</span>
+                        Generate Results
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="dashboard-nav-item"
+                        onclick="showDashboardSection('reports')"
+                    >
+                        <span>📄</span>
+                        Reports
+                    </button>
+
+
+                    <button
+                        type="button"
+                        class="dashboard-nav-item"
+                        onclick="showDashboardSection('settings')"
+                    >
+                        <span>⚙️</span>
+                        Settings
+                    </button>
+
+                </nav>
+
+
+                <button
+                    type="button"
+                    class="dashboard-logout"
+                    onclick="logout()"
+                >
+                    <span>↪</span>
+                    Sign Out
+                </button>
+
+            </aside>
+
+
+            <!-- MAIN -->
+
+            <main class="dashboard-main">
+
+                <header class="dashboard-topbar">
+
+                    <div>
+
+                        <p class="dashboard-kicker">
+                            TEACHER DASHBOARD
+                        </p>
+
+                        <h1>
+                            Welcome back,
+                            ${
+                                teacherProfile?.full_name ||
+                                "Teacher"
+                            }
+                        </h1>
 
                     </div>
 
-                    <nav class="dashboard-nav">
+
+                    <div class="teacher-profile-mini">
+
+                        <div class="teacher-avatar">
+                            ${
+                                getInitials(
+                                    teacherProfile?.full_name ||
+                                    "Teacher"
+                                )
+                            }
+                        </div>
+
+                        <div>
+
+                            <strong>
+                                ${
+                                    teacherProfile?.full_name ||
+                                    "Teacher"
+                                }
+                            </strong>
+
+                            <span>
+                                ${
+                                    teacherProfile?.school_name ||
+                                    "ClassMark Teacher"
+                                }
+                            </span>
+
+                        </div>
+
+                    </div>
+
+                </header>
+
+
+                <div
+                    id="dashboardContent"
+                    class="dashboard-content"
+                >
+
+                    ${overviewSection()}
+
+                </div>
+
+            </main>
+
+        </div>
+    `;
+
+    document.body.appendChild(
+        dashboard
+    );
+
+    addDashboardStyles();
+
+    loadDashboardStats();
+}
+
+
+/* =========================================================
+   10. DASHBOARD OVERVIEW
+   ========================================================= */
+
+function overviewSection() {
+
+    return `
+
+        <section
+            class="dashboard-section"
+            data-section="overview"
+        >
+
+            <div class="dashboard-section-heading">
+
+                <div>
+
+                    <span class="dashboard-label">
+                        OVERVIEW
+                    </span>
+
+                    <h2>
+                        Class Overview
+                    </h2>
+
+                    <p>
+                        Manage your classroom,
+                        students and academic records
+                        from one place.
+                    </p>
+
+                </div>
+
+            </div>
+
+
+            <div class="dashboard-stat-grid">
+
+                <article class="dashboard-stat-card">
+
+                    <span class="stat-icon">
+                        👨‍🎓
+                    </span>
+
+                    <div>
+
+                        <small>
+                            Students
+                        </small>
+
+                        <strong id="dashboardStudentCount">
+                            0
+                        </strong>
+
+                    </div>
+
+                </article>
+
+
+                <article class="dashboard-stat-card">
+
+                    <span class="stat-icon">
+                        📚
+                    </span>
+
+                    <div>
+
+                        <small>
+                            Subjects
+                        </small>
+
+                        <strong id="dashboardSubjectCount">
+                            0
+                        </strong>
+
+                    </div>
+
+                </article>
+
+
+                <article class="dashboard-stat-card">
+
+                    <span class="stat-icon">
+                        📊
+                    </span>
+
+                    <div>
+
+                        <small>
+                            Results
+                        </small>
+
+                        <strong>
+                            0
+                        </strong>
+
+                    </div>
+
+                </article>
+
+
+                <article class="dashboard-stat-card">
+
+                    <span class="stat-icon">
+                        ✓
+                    </span>
+
+                    <div>
+
+                        <small>
+                            Completion
+                        </small>
+
+                        <strong>
+                            0%
+                        </strong>
+
+                    </div>
+
+                </article>
+
+            </div>
+
+
+            <div class="dashboard-two-column">
+
+                <div class="dashboard-panel">
+
+                    <div class="panel-heading">
+
+                        <div>
+
+                            <span class="dashboard-label">
+                                CLASS INFORMATION
+                            </span>
+
+                            <h3>
+                                ${
+                                    teacherProfile?.class_name ||
+                                    "Class not set"
+                                }
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="class-info-list">
+
+                        <div>
+                            <span>
+                                School
+                            </span>
+
+                            <strong>
+                                ${
+                                    teacherProfile?.school_name ||
+                                    "Not set"
+                                }
+                            </strong>
+                        </div>
+
+
+                        <div>
+                            <span>
+                                Session
+                            </span>
+
+                            <strong>
+                                ${
+                                    teacherProfile?.session ||
+                                    "Not set"
+                                }
+                            </strong>
+                        </div>
+
+
+                        <div>
+                            <span>
+                                Term
+                            </span>
+
+                            <strong>
+                                ${
+                                    teacherProfile?.term ||
+                                    "Not set"
+                                }
+                            </strong>
+                        </div>
+
+                    </div>
+
+                </div>
+
+
+                <div class="dashboard-panel">
+
+                    <div class="panel-heading">
+
+                        <div>
+
+                            <span class="dashboard-label">
+                                QUICK ACTIONS
+                            </span>
+
+                            <h3>
+                                Get Started
+                            </h3>
+
+                        </div>
+
+                    </div>
+
+
+                    <div class="quick-action-grid">
 
                         <button
                             type="button"
-                            class="dashboard-nav-item active"
-                            onclick="showDashboardSection('overview', this)"
-                        >
-                            <span>⌂</span>
-                            Overview
-                        </button>
-
-                        <button
-                            type="button"
-                            class="dashboard-nav-item"
-                            onclick="showDashboardSection('students', this)"
+                            onclick="showDashboardSection('students')"
                         >
                             <span>👨‍🎓</span>
-                            Students
+                            Manage Students
                         </button>
+
 
                         <button
                             type="button"
-                            class="dashboard-nav-item"
-                            onclick="showDashboardSection('subjects', this)"
+                            onclick="showDashboardSection('subjects')"
                         >
                             <span>📚</span>
-                            Subjects
+                            Manage Subjects
                         </button>
+
 
                         <button
                             type="button"
-                            class="dashboard-nav-item"
-                            onclick="showDashboardSection('marks', this)"
+                            onclick="showDashboardSection('marks')"
                         >
                             <span>📝</span>
                             Enter Marks
                         </button>
 
-                        <button
-                            type="button"
-                            class="dashboard-nav-item"
-                            onclick="showDashboardSection('ocr', this)"
-                        >
-                            <span>📷</span>
-                            Score Sheet OCR
-                        </button>
 
                         <button
                             type="button"
-                            class="dashboard-nav-item"
-                            onclick="showDashboardSection('attendance', this)"
+                            onclick="showDashboardSection('attendance')"
                         >
                             <span>📅</span>
                             Attendance
                         </button>
 
-                        <button
-                            type="button"
-                            class="dashboard-nav-item"
-                            onclick="showDashboardSection('results', this)"
-                        >
-                            <span>📊</span>
-                            Generate Results
-                        </button>
+                    </div>
 
-                        <button
-                            type="button"
-                            class="dashboard-nav-item"
-                            onclick="showDashboardSection('reports', this)"
-                        >
-                            <span>📄</span>
-                            Reports
-                        </button>
-
-                        <button
-                            type="button"
-                            class="dashboard-nav-item"
-                            onclick="showDashboardSection('settings', this)"
-                        >
-                            <span>⚙️</span>
-                            Settings
-                        </button>
-
-                    </nav>
-
-                </aside>
-
-                <main class="dashboard-main">
-
-                    <!-- OVERVIEW -->
-
-                    <section
-                        class="dashboard-section active"
-                        data-section="overview"
-                    >
-
-                        <div class="dashboard-welcome">
-
-                            <div>
-
-                                <span class="dashboard-eyebrow">
-                                    TEACHER WORKSPACE
-                                </span>
-
-                                <h1>
-                                    Welcome,
-                                    ${escapeHTML(displayName)}
-                                </h1>
-
-                                <p>
-                                    Manage your classroom,
-                                    academic records and results
-                                    from one place.
-                                </p>
-
-                            </div>
-
-                        </div>
-
-                        <div class="teacher-profile-card">
-
-                            <div class="profile-card-header">
-
-                                <div>
-
-                                    <span class="dashboard-eyebrow">
-                                        TEACHER PROFILE
-                                    </span>
-
-                                    <h2>
-                                        Class Information
-                                    </h2>
-
-                                </div>
-
-                                <div class="profile-status">
-                                    ✓ Authenticated
-                                </div>
-
-                            </div>
-
-                            <div class="profile-details-grid">
-
-                                ${profileDetail(
-                                    "Full Name",
-                                    displayName
-                                )}
-
-                                ${profileDetail(
-                                    "Phone Number",
-                                    profile.phone ||
-                                    "Not provided"
-                                )}
-
-                                ${profileDetail(
-                                    "Username",
-                                    profile.username ||
-                                    "Not provided"
-                                )}
-
-                                ${profileDetail(
-                                    "Email",
-                                    profile.email ||
-                                    user?.email ||
-                                    "Not provided"
-                                )}
-
-                                ${profileDetail(
-                                    "School",
-                                    schoolName
-                                )}
-
-                                ${profileDetail(
-                                    "Class",
-                                    className
-                                )}
-
-                                ${profileDetail(
-                                    "Session",
-                                    session
-                                )}
-
-                                ${profileDetail(
-                                    "Term",
-                                    term
-                                )}
-
-                            </div>
-
-                        </div>
-
-                        <div class="dashboard-stats">
-
-                            <div class="dashboard-stat-card">
-
-                                <span>
-                                    Students
-                                </span>
-
-                                <strong id="dashboardStudentCount">
-                                    0
-                                </strong>
-
-                                <small>
-                                    Students in your class
-                                </small>
-
-                            </div>
-
-                            <div class="dashboard-stat-card">
-
-                                <span>
-                                    Subjects
-                                </span>
-
-                                <strong>
-                                    0
-                                </strong>
-
-                                <small>
-                                    No subjects configured
-                                </small>
-
-                            </div>
-
-                            <div class="dashboard-stat-card">
-
-                                <span>
-                                    Results
-                                </span>
-
-                                <strong>
-                                    0%
-                                </strong>
-
-                                <small>
-                                    Result completion
-                                </small>
-
-                            </div>
-
-                            <div class="dashboard-stat-card">
-
-                                <span>
-                                    Attendance
-                                </span>
-
-                                <strong>
-                                    0%
-                                </strong>
-
-                                <small>
-                                    Attendance recorded
-                                </small>
-
-                            </div>
-
-                        </div>
-
-                        <div class="quick-actions">
-
-                            <h2>
-                                Quick Actions
-                            </h2>
-
-                            <div class="quick-action-grid">
-
-                                <button
-                                    type="button"
-                                    onclick="showDashboardSection('students')"
-                                >
-                                    <span>👨‍🎓</span>
-
-                                    <strong>
-                                        Add Students
-                                    </strong>
-
-                                    <small>
-                                        Manage your class list
-                                    </small>
-
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onclick="showDashboardSection('subjects')"
-                                >
-                                    <span>📚</span>
-
-                                    <strong>
-                                        Manage Subjects
-                                    </strong>
-
-                                    <small>
-                                        Configure class subjects
-                                    </small>
-
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onclick="showDashboardSection('marks')"
-                                >
-                                    <span>📝</span>
-
-                                    <strong>
-                                        Enter Marks
-                                    </strong>
-
-                                    <small>
-                                        Record CA and exam scores
-                                    </small>
-
-                                </button>
-
-                                <button
-                                    type="button"
-                                    onclick="showDashboardSection('attendance')"
-                                >
-                                    <span>📅</span>
-
-                                    <strong>
-                                        Attendance
-                                    </strong>
-
-                                    <small>
-                                        Track student attendance
-                                    </small>
-
-                                </button>
-
-                            </div>
-
-                        </div>
-
-                    </section>
-
-
-                    <!-- STUDENTS -->
-
-                    <section
-                        class="dashboard-section"
-                        data-section="students"
-                    >
-
-                        ${studentManagementSection()}
-
-                    </section>
-
-
-                    <!-- SUBJECTS -->
-
-                    <section
-                        class="dashboard-section"
-                        data-section="subjects"
-                    >
-
-                        ${comingSoonSection(
-                            "Subject Management",
-                            "Configure the subjects used by your class."
-                        )}
-
-                    </section>
-
-
-                    <!-- MARKS -->
-
-                    <section
-                        class="dashboard-section"
-                        data-section="marks"
-                    >
-
-                        ${comingSoonSection(
-                            "Marks & Assessments",
-                            "Record CA1, CA2, CA3 and examination scores."
-                        )}
-
-                    </section>
-
-
-                    <!-- OCR -->
-
-                    <section
-                        class="dashboard-section"
-                        data-section="ocr"
-                    >
-
-                        ${comingSoonSection(
-                            "Score Sheet OCR",
-                            "Upload score sheets and extract marks automatically."
-                        )}
-
-                    </section>
-
-
-                    <!-- ATTENDANCE -->
-
-                    <section
-                        class="dashboard-section"
-                        data-section="attendance"
-                    >
-
-                        ${comingSoonSection(
-                            "Attendance",
-                            "Track present days, absent days and attendance percentage."
-                        )}
-
-                    </section>
-
-
-                    <!-- RESULTS -->
-
-                    <section
-                        class="dashboard-section"
-                        data-section="results"
-                    >
-
-                        ${comingSoonSection(
-                            "Result Generation",
-                            "Calculate totals, averages, grades and positions."
-                        )}
-
-                    </section>
-
-
-                    <!-- REPORTS -->
-
-                    <section
-                        class="dashboard-section"
-                        data-section="reports"
-                    >
-
-                        ${comingSoonSection(
-                            "Professional Reports",
-                            "Generate student and class academic reports."
-                        )}
-
-                    </section>
-
-
-                    <!-- SETTINGS -->
-
-                    <section
-                        class="dashboard-section"
-                        data-section="settings"
-                    >
-
-                        ${comingSoonSection(
-                            "Settings",
-                            "Manage your ClassMark teacher account and class configuration."
-                        )}
-
-                    </section>
-
-                </main>
+                </div>
 
             </div>
 
-        </div>
+        </section>
     `;
-
-    addDashboardStyles();
-
-    loadStudents();
 }
 
+
 /* =========================================================
-   STUDENT MANAGEMENT SECTION
+   11. STUDENT MANAGEMENT SECTION
    ========================================================= */
 
 function studentManagementSection() {
 
-    const profile =
-        teacherProfile || {};
-
-    const className =
-        profile.class_name || "";
-
-    const session =
-        profile.session || "";
-
-    const term =
-        profile.term || "";
-
     return `
 
-        <div class="student-page">
+        <section
+            class="dashboard-section"
+            data-section="students"
+        >
 
-            <div class="student-page-header">
+            <div class="dashboard-section-heading">
 
                 <div>
 
-                    <span class="dashboard-eyebrow">
+                    <span class="dashboard-label">
                         STUDENT MANAGEMENT
                     </span>
 
-                    <h1>
+                    <h2>
                         Students
-                    </h1>
+                    </h2>
 
                     <p>
-                        Add, organize and manage the students
+                        Add, organize and manage students
                         in your class.
                     </p>
 
                 </div>
 
+
                 <button
                     type="button"
-                    class="student-primary-btn"
+                    class="dashboard-primary-btn"
                     onclick="openStudentForm()"
                 >
-                    <span>＋</span>
-                    Add Student
+                    + Add Student
                 </button>
 
             </div>
 
 
-            <div
-                id="studentFormContainer"
-                class="student-form-container"
-                style="display:none;"
-            >
+            <div class="student-management-toolbar">
 
-                <div class="student-form-card">
+                <div class="student-search">
 
-                    <div class="student-form-header">
-
-                        <div>
-
-                            <span class="dashboard-eyebrow">
-                                NEW STUDENT
-                            </span>
-
-                            <h2>
-                                Add Student
-                            </h2>
-
-                        </div>
-
-                        <button
-                            type="button"
-                            class="student-close-btn"
-                            onclick="closeStudentForm()"
-                            aria-label="Close form"
-                        >
-                            ×
-                        </button>
-
-                    </div>
-
-
-                    <form
-                        id="studentForm"
-                        onsubmit="saveStudent(event)"
-                    >
-
-                        <div class="student-form-grid">
-
-
-                            <div class="student-field full">
-
-                                <label for="studentFullName">
-                                    Full Name
-                                </label>
-
-                                <input
-                                    type="text"
-                                    id="studentFullName"
-                                    placeholder="Enter student's full name"
-                                    autocomplete="off"
-                                    required
-                                >
-
-                            </div>
-
-
-                            <div class="student-field">
-
-                                <label for="studentGender">
-                                    Gender
-                                </label>
-
-                                <select
-                                    id="studentGender"
-                                    required
-                                >
-
-                                    <option value="">
-                                        Select gender
-                                    </option>
-
-                                    <option value="Male">
-                                        Male
-                                    </option>
-
-                                    <option value="Female">
-                                        Female
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-
-                            <div class="student-field">
-
-                                <label for="studentDOB">
-                                    Date of Birth
-                                </label>
-
-                                <input
-                                    type="date"
-                                    id="studentDOB"
-                                >
-
-                            </div>
-
-
-                            <div class="student-field">
-
-                                <label for="studentAdmission">
-                                    Admission Number
-                                </label>
-
-                                <input
-                                    type="text"
-                                    id="studentAdmission"
-                                    placeholder="e.g. CM/001"
-                                    autocomplete="off"
-                                >
-
-                            </div>
-
-
-                            <div class="student-field">
-
-                                <label for="studentClass">
-                                    Class
-                                </label>
-
-                                <input
-                                    type="text"
-                                    id="studentClass"
-                                    value="${escapeHTML(className)}"
-                                    placeholder="e.g. JSS2B"
-                                    required
-                                >
-
-                            </div>
-
-
-                            <div class="student-field">
-
-                                <label for="studentSession">
-                                    Session
-                                </label>
-
-                                <input
-                                    type="text"
-                                    id="studentSession"
-                                    value="${escapeHTML(session)}"
-                                    placeholder="e.g. 2026/2027"
-                                    required
-                                >
-
-                            </div>
-
-
-                            <div class="student-field">
-
-                                <label for="studentTerm">
-                                    Term
-                                </label>
-
-                                <select
-                                    id="studentTerm"
-                                    required
-                                >
-
-                                    <option value="">
-                                        Select term
-                                    </option>
-
-                                    <option
-                                        value="First Term"
-                                        ${term === "First Term" ? "selected" : ""}
-                                    >
-                                        First Term
-                                    </option>
-
-                                    <option
-                                        value="Second Term"
-                                        ${term === "Second Term" ? "selected" : ""}
-                                    >
-                                        Second Term
-                                    </option>
-
-                                    <option
-                                        value="Third Term"
-                                        ${term === "Third Term" ? "selected" : ""}
-                                    >
-                                        Third Term
-                                    </option>
-
-                                </select>
-
-                            </div>
-
-                        </div>
-
-
-                        <div
-                            id="studentFormMessage"
-                            class="student-form-message"
-                            style="display:none;"
-                        ></div>
-
-
-                        <div class="student-form-actions">
-
-                            <button
-                                type="button"
-                                class="student-secondary-btn"
-                                onclick="closeStudentForm()"
-                            >
-                                Cancel
-                            </button>
-
-                            <button
-                                type="submit"
-                                class="student-primary-btn"
-                                id="saveStudentButton"
-                            >
-                                Save Student
-                            </button>
-
-                        </div>
-
-                    </form>
-
-                </div>
-
-            </div>
-
-
-            <div class="student-toolbar">
-
-                <div class="student-search-box">
-
-                    <span>
-                        🔍
-                    </span>
+                    <span>⌕</span>
 
                     <input
                         type="search"
@@ -1328,29 +925,309 @@ function studentManagementSection() {
                 </div>
 
 
-                <div class="student-count-box">
+                <button
+                    type="button"
+                    class="dashboard-secondary-btn"
+                    onclick="sortStudents()"
+                >
+                    Sort A–Z
+                </button>
 
+            </div>
+
+
+            <div class="student-counter-grid">
+
+                <div class="mini-stat">
                     <span>
                         Total Students
                     </span>
 
-                    <strong id="studentCount">
+                    <strong id="studentTotalCount">
                         0
                     </strong>
+                </div>
 
+
+                <div class="mini-stat">
+                    <span>
+                        Male
+                    </span>
+
+                    <strong id="studentMaleCount">
+                        0
+                    </strong>
+                </div>
+
+
+                <div class="mini-stat">
+                    <span>
+                        Female
+                    </span>
+
+                    <strong id="studentFemaleCount">
+                        0
+                    </strong>
                 </div>
 
             </div>
 
 
+            <div class="dashboard-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+
+                        <span class="dashboard-label">
+                            CLASS LIST
+                        </span>
+
+                        <h3>
+                            Students
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="studentsTableContainer"
+                    class="students-table-container"
+                >
+
+                    <div class="loading-state">
+                        Loading students...
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        ${studentFormModal()}
+
+    `;
+}
+
+
+/* =========================================================
+   12. STUDENT FORM MODAL
+   ========================================================= */
+
+function studentFormModal() {
+
+    return `
+
+        <div
+            id="studentFormModal"
+            class="student-form-modal"
+            aria-hidden="true"
+        >
+
             <div
-                id="studentListContainer"
-                class="student-list-container"
+                class="student-form-content"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="studentFormTitle"
             >
 
-                <div class="student-loading">
-                    Loading students...
+                <button
+                    type="button"
+                    class="student-form-close"
+                    onclick="closeStudentForm()"
+                >
+                    ×
+                </button>
+
+
+                <div class="student-form-header">
+
+                    <span class="dashboard-label">
+                        STUDENT RECORD
+                    </span>
+
+                    <h3 id="studentFormTitle">
+                        Add Student
+                    </h3>
+
+                    <p>
+                        Enter the student's information
+                        below.
+                    </p>
+
                 </div>
+
+
+                <form
+                    id="studentForm"
+                    onsubmit="saveStudent(event)"
+                >
+
+                    <div class="form-grid">
+
+                        <div class="form-field form-field-full">
+
+                            <label for="studentFullName">
+                                Full Name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="studentFullName"
+                                placeholder="Enter student's full name"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label for="studentGender">
+                                Gender
+                            </label>
+
+                            <select id="studentGender">
+
+                                <option value="">
+                                    Select gender
+                                </option>
+
+                                <option value="Male">
+                                    Male
+                                </option>
+
+                                <option value="Female">
+                                    Female
+                                </option>
+
+                            </select>
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label for="studentDOB">
+                                Date of Birth
+                            </label>
+
+                            <input
+                                type="date"
+                                id="studentDOB"
+                            >
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label for="studentAdmission">
+                                Admission Number
+                            </label>
+
+                            <input
+                                type="text"
+                                id="studentAdmission"
+                                placeholder="Optional"
+                            >
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label for="studentClass">
+                                Class
+                            </label>
+
+                            <input
+                                type="text"
+                                id="studentClass"
+                                value="${
+                                    teacherProfile?.class_name ||
+                                    ""
+                                }"
+                                placeholder="e.g. JSS2B"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label for="studentSession">
+                                Session
+                            </label>
+
+                            <input
+                                type="text"
+                                id="studentSession"
+                                value="${
+                                    teacherProfile?.session ||
+                                    ""
+                                }"
+                                placeholder="e.g. 2026/2027"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label for="studentTerm">
+                                Term
+                            </label>
+
+                            <input
+                                type="text"
+                                id="studentTerm"
+                                value="${
+                                    teacherProfile?.term ||
+                                    ""
+                                }"
+                                placeholder="e.g. First Term"
+                                required
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="studentFormError"
+                        class="form-error"
+                    ></div>
+
+
+                    <div class="student-form-actions">
+
+                        <button
+                            type="button"
+                            class="dashboard-secondary-btn"
+                            onclick="closeStudentForm()"
+                        >
+                            Cancel
+                        </button>
+
+
+                        <button
+                            type="submit"
+                            class="dashboard-primary-btn"
+                        >
+                            Save Student
+                        </button>
+
+                    </div>
+
+                </form>
 
             </div>
 
@@ -1359,48 +1236,20 @@ function studentManagementSection() {
     `;
 }
 
+
 /* =========================================================
-   OPEN STUDENT FORM
+   13. OPEN STUDENT FORM
    ========================================================= */
 
 function openStudentForm() {
 
-    const container =
+    const modal =
         document.getElementById(
-            "studentFormContainer"
+            "studentFormModal"
         );
 
-    if (!container) return;
-
-    container.style.display =
-        "block";
-
-    const nameInput =
-        document.getElementById(
-            "studentFullName"
-        );
-
-    if (nameInput) {
-        setTimeout(() => {
-            nameInput.focus();
-        }, 100);
-    }
-}
-
-/* =========================================================
-   CLOSE STUDENT FORM
-   ========================================================= */
-
-function closeStudentForm() {
-
-    const container =
-        document.getElementById(
-            "studentFormContainer"
-        );
-
-    if (container) {
-        container.style.display =
-            "none";
+    if (!modal) {
+        return;
     }
 
     const form =
@@ -1412,45 +1261,99 @@ function closeStudentForm() {
         form.reset();
     }
 
-    const profile =
-        teacherProfile || {};
-
-    const classInput =
+    const studentClass =
         document.getElementById(
             "studentClass"
         );
 
-    const sessionInput =
+    const studentSession =
         document.getElementById(
             "studentSession"
         );
 
-    if (classInput) {
-        classInput.value =
-            profile.class_name || "";
+    const studentTerm =
+        document.getElementById(
+            "studentTerm"
+        );
+
+    if (studentClass) {
+        studentClass.value =
+            teacherProfile?.class_name ||
+            "";
     }
 
-    if (sessionInput) {
-        sessionInput.value =
-            profile.session || "";
+    if (studentSession) {
+        studentSession.value =
+            teacherProfile?.session ||
+            "";
     }
 
-    hideStudentFormMessage();
+    if (studentTerm) {
+        studentTerm.value =
+            teacherProfile?.term ||
+            "";
+    }
+
+    clearStudentFormError();
+
+    modal.classList.add("active");
+    modal.setAttribute(
+        "aria-hidden",
+        "false"
+    );
+
+    setTimeout(() => {
+
+        const input =
+            document.getElementById(
+                "studentFullName"
+            );
+
+        if (input) {
+            input.focus();
+        }
+
+    }, 100);
 }
 
+
 /* =========================================================
-   SAVE STUDENT
+   14. CLOSE STUDENT FORM
+   ========================================================= */
+
+function closeStudentForm() {
+
+    const modal =
+        document.getElementById(
+            "studentFormModal"
+        );
+
+    if (modal) {
+
+        modal.classList.remove(
+            "active"
+        );
+
+        modal.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+    }
+}
+
+
+/* =========================================================
+   15. SAVE STUDENT
    ========================================================= */
 
 async function saveStudent(event) {
 
     event.preventDefault();
 
-    if (!currentUser || !currentUser.id) {
+    if (!currentUser) {
 
-        showStudentFormMessage(
-            "Your session has expired. Please log in again.",
-            "error"
+        showStudentFormError(
+            "You must be logged in."
         );
 
         return;
@@ -1458,184 +1361,223 @@ async function saveStudent(event) {
 
     const fullName =
         document
-            .getElementById("studentFullName")
-            ?.value
+            .getElementById(
+                "studentFullName"
+            )
+            .value
             .trim();
 
     const gender =
         document
-            .getElementById("studentGender")
-            ?.value;
+            .getElementById(
+                "studentGender"
+            )
+            .value;
 
-    const dateOfBirth =
+    const dob =
         document
-            .getElementById("studentDOB")
-            ?.value || null;
+            .getElementById(
+                "studentDOB"
+            )
+            .value || null;
 
     const admissionNumber =
         document
-            .getElementById("studentAdmission")
-            ?.value
+            .getElementById(
+                "studentAdmission"
+            )
+            .value
             .trim() || null;
 
     const className =
         document
-            .getElementById("studentClass")
-            ?.value
+            .getElementById(
+                "studentClass"
+            )
+            .value
             .trim();
 
     const session =
         document
-            .getElementById("studentSession")
-            ?.value
+            .getElementById(
+                "studentSession"
+            )
+            .value
             .trim();
 
     const term =
         document
-            .getElementById("studentTerm")
-            ?.value;
+            .getElementById(
+                "studentTerm"
+            )
+            .value
+            .trim();
 
-    if (
-        !fullName ||
-        !gender ||
-        !className ||
-        !session ||
-        !term
-    ) {
 
-        showStudentFormMessage(
-            "Please complete all required fields.",
-            "error"
+    if (!fullName) {
+
+        showStudentFormError(
+            "Please enter the student's full name."
         );
 
         return;
     }
 
-    const saveButton =
-        document.getElementById(
-            "saveStudentButton"
+
+    if (!className) {
+
+        showStudentFormError(
+            "Please enter the class."
         );
 
-    if (saveButton) {
+        return;
+    }
 
-        saveButton.disabled = true;
 
-        saveButton.textContent =
+    if (!session) {
+
+        showStudentFormError(
+            "Please enter the academic session."
+        );
+
+        return;
+    }
+
+
+    if (!term) {
+
+        showStudentFormError(
+            "Please enter the term."
+        );
+
+        return;
+    }
+
+
+    const submitButton =
+        document.querySelector(
+            "#studentForm button[type='submit']"
+        );
+
+    if (submitButton) {
+
+        submitButton.disabled = true;
+
+        submitButton.textContent =
             "Saving...";
     }
 
-    hideStudentFormMessage();
 
     try {
 
-        const studentData = {
-
-            teacher_id:
-                currentUser.id,
-
-            full_name:
-                fullName,
-
-            gender:
-                gender,
-
-            date_of_birth:
-                dateOfBirth,
-
-            admission_number:
-                admissionNumber,
-
-            class_name:
-                className,
-
-            session:
-                session,
-
-            term:
-                term
-        };
-
         const {
-            data,
             error
         } =
             await supabaseClient
                 .from("students")
                 .insert([
-                    studentData
-                ])
-                .select()
-                .single();
+                    {
+                        teacher_id:
+                            currentUser.id,
+
+                        full_name:
+                            fullName,
+
+                        gender:
+                            gender || null,
+
+                        date_of_birth:
+                            dob,
+
+                        admission_number:
+                            admissionNumber,
+
+                        photo_url:
+                            null,
+
+                        class_name:
+                            className,
+
+                        session:
+                            session,
+
+                        term:
+                            term
+                    }
+                ]);
+
 
         if (error) {
-            throw error;
+
+            console.error(
+                "Student insert error:",
+                error
+            );
+
+            showStudentFormError(
+                error.message
+            );
+
+            return;
         }
 
-        console.log(
-            "Student saved:",
-            data
-        );
 
-        showStudentFormMessage(
-            "Student added successfully.",
-            "success"
-        );
+        closeStudentForm();
 
         await loadStudents();
 
-        setTimeout(() => {
-            closeStudentForm();
-        }, 700);
+        await loadDashboardStats();
 
     } catch (error) {
 
         console.error(
-            "Save student error:",
+            "Unexpected student save error:",
             error
         );
 
-        showStudentFormMessage(
-            getStudentErrorMessage(error),
-            "error"
+        showStudentFormError(
+            "Unable to save student. Please try again."
         );
 
     } finally {
 
-        if (saveButton) {
+        if (submitButton) {
 
-            saveButton.disabled = false;
+            submitButton.disabled = false;
 
-            saveButton.textContent =
+            submitButton.textContent =
                 "Save Student";
         }
     }
 }
 
+
 /* =========================================================
-   LOAD STUDENTS
+   16. LOAD STUDENTS
    ========================================================= */
 
 async function loadStudents() {
 
-    const listContainer =
+    const container =
         document.getElementById(
-            "studentListContainer"
+            "studentsTableContainer"
         );
 
-    if (!currentUser || !currentUser.id) {
+    if (!currentUser) {
         return;
     }
 
     try {
 
-        if (listContainer) {
+        if (container) {
 
-            listContainer.innerHTML = `
-                <div class="student-loading">
+            container.innerHTML = `
+                <div class="loading-state">
                     Loading students...
                 </div>
             `;
         }
+
 
         const {
             data,
@@ -1643,481 +1585,503 @@ async function loadStudents() {
         } =
             await supabaseClient
                 .from("students")
-                .select(
-                    "id, teacher_id, full_name, gender, date_of_birth, admission_number, photo_url, class_name, session, term, created_at, updated_at"
-                )
+                .select("*")
                 .eq(
                     "teacher_id",
                     currentUser.id
+                )
+                .order(
+                    "full_name",
+                    {
+                        ascending: true
+                    }
                 );
 
+
         if (error) {
-            throw error;
+
+            console.error(
+                "Load students error:",
+                error
+            );
+
+            if (container) {
+
+                container.innerHTML = `
+                    <div class="empty-state">
+                        <strong>
+                            Unable to load students
+                        </strong>
+
+                        <p>
+                            ${escapeHtml(
+                                error.message
+                            )}
+                        </p>
+                    </div>
+                `;
+            }
+
+            return;
         }
 
+
         studentsCache =
-            Array.isArray(data)
-                ? data
-                : [];
+            data || [];
 
-        sortStudents();
+        sortStudents(false);
 
-        renderStudents(
-            studentsCache
-        );
+        renderStudents();
 
         updateStudentCounters();
 
     } catch (error) {
 
         console.error(
-            "Load students error:",
+            "Unexpected load students error:",
             error
         );
-
-        if (listContainer) {
-
-            listContainer.innerHTML = `
-
-                <div class="student-error">
-
-                    <div class="student-empty-icon">
-                        !
-                    </div>
-
-                    <h3>
-                        Unable to load students
-                    </h3>
-
-                    <p>
-                        ${escapeHTML(
-                            getStudentErrorMessage(error)
-                        )}
-                    </p>
-
-                    <button
-                        type="button"
-                        class="student-secondary-btn"
-                        onclick="loadStudents()"
-                    >
-                        Try Again
-                    </button>
-
-                </div>
-
-            `;
-        }
     }
 }
 
+
 /* =========================================================
-   SORT STUDENTS
+   17. SORT STUDENTS
    ========================================================= */
 
-function sortStudents() {
+function sortStudents(showMessage = true) {
 
     studentsCache.sort(
-        (a, b) => {
-
-            const genderOrder = {
-                Male: 1,
-                Female: 2
-            };
+        function (a, b) {
 
             const genderA =
-                genderOrder[a.gender] || 3;
+                a.gender === "Male"
+                    ? 0
+                    : a.gender === "Female"
+                        ? 1
+                        : 2;
 
             const genderB =
-                genderOrder[b.gender] || 3;
+                b.gender === "Male"
+                    ? 0
+                    : b.gender === "Female"
+                        ? 1
+                        : 2;
 
-            if (genderA !== genderB) {
-                return genderA - genderB;
+            if (
+                genderA !==
+                genderB
+            ) {
+                return (
+                    genderA -
+                    genderB
+                );
             }
 
             return (
                 (a.full_name || "")
+                    .toLowerCase()
                     .localeCompare(
-                        b.full_name || "",
-                        undefined,
-                        {
-                            sensitivity: "base"
-                        }
+                        (
+                            b.full_name ||
+                            ""
+                        )
+                            .toLowerCase()
                     )
             );
         }
     );
+
+    renderStudents();
+
+    updateStudentCounters();
 }
 
+
 /* =========================================================
-   RENDER STUDENTS
+   18. RENDER STUDENTS
    ========================================================= */
 
-function renderStudents(students) {
+function renderStudents() {
 
     const container =
         document.getElementById(
-            "studentListContainer"
+            "studentsTableContainer"
         );
 
-    if (!container) return;
-
-    if (!students || students.length === 0) {
-
-        container.innerHTML = `
-
-            <div class="student-empty">
-
-                <div class="student-empty-icon">
-                    👨‍🎓
-                </div>
-
-                <h3>
-                    No students yet
-                </h3>
-
-                <p>
-                    Start building your class list
-                    by adding your first student.
-                </p>
-
-                <button
-                    type="button"
-                    class="student-primary-btn"
-                    onclick="openStudentForm()"
-                >
-                    ＋ Add First Student
-                </button>
-
-            </div>
-
-        `;
-
+    if (!container) {
         return;
     }
 
-    const rows =
-        students
-            .map(
-                (student, index) =>
-                    studentRow(
-                        student,
-                        index
-                    )
-            )
-            .join("");
-
-    container.innerHTML = `
-
-        <div class="student-table-card">
-
-            <div class="student-table-header">
-
-                <div>
-                    <strong>
-                        Class Students
-                    </strong>
-
-                    <span>
-                        ${students.length}
-                        ${students.length === 1 ? "student" : "students"}
-                    </span>
-                </div>
-
-                <button
-                    type="button"
-                    class="student-refresh-btn"
-                    onclick="loadStudents()"
-                >
-                    ↻ Refresh
-                </button>
-
-            </div>
-
-            <div class="student-table-wrap">
-
-                <table class="student-table">
-
-                    <thead>
-
-                        <tr>
-
-                            <th>
-                                No.
-                            </th>
-
-                            <th>
-                                Student
-                            </th>
-
-                            <th>
-                                Gender
-                            </th>
-
-                            <th>
-                                Admission No.
-                            </th>
-
-                            <th>
-                                Class
-                            </th>
-
-                            <th>
-                                Session
-                            </th>
-
-                            <th>
-                                Term
-                            </th>
-
-                            <th>
-                                Action
-                            </th>
-
-                        </tr>
-
-                    </thead>
-
-                    <tbody>
-                        ${rows}
-                    </tbody>
-
-                </table>
-
-            </div>
-
-        </div>
-
-    `;
-}
-
-/* =========================================================
-   STUDENT ROW
-   ========================================================= */
-
-function studentRow(
-    student,
-    index
-) {
-
-    const genderClass =
-        student.gender === "Male"
-            ? "male"
-            : "female";
-
-    const initials =
-        getInitials(
-            student.full_name
-        );
-
-    return `
-
-        <tr>
-
-            <td>
-                <span class="student-serial">
-                    ${index + 1}
-                </span>
-            </td>
-
-            <td>
-
-                <div class="student-name-cell">
-
-                    <div class="student-avatar ${genderClass}">
-                        ${escapeHTML(initials)}
-                    </div>
-
-                    <div>
-
-                        <strong>
-                            ${escapeHTML(
-                                student.full_name
-                            )}
-                        </strong>
-
-                        <small>
-                            ${student.date_of_birth
-                                ? escapeHTML(
-                                    formatDate(
-                                        student.date_of_birth
-                                    )
-                                )
-                                : "Date of birth not provided"}
-                        </small>
-
-                    </div>
-
-                </div>
-
-            </td>
-
-            <td>
-
-                <span
-                    class="gender-badge ${genderClass}"
-                >
-                    ${escapeHTML(
-                        student.gender || "—"
-                    )}
-                </span>
-
-            </td>
-
-            <td>
-                ${escapeHTML(
-                    student.admission_number || "—"
-                )}
-            </td>
-
-            <td>
-                ${escapeHTML(
-                    student.class_name || "—"
-                )}
-            </td>
-
-            <td>
-                ${escapeHTML(
-                    student.session || "—"
-                )}
-            </td>
-
-            <td>
-                ${escapeHTML(
-                    student.term || "—"
-                )}
-            </td>
-
-            <td>
-
-                <button
-                    type="button"
-                    class="student-delete-btn"
-                    onclick="deleteStudent('${student.id}')"
-                    title="Delete student"
-                    aria-label="Delete ${escapeHTML(student.full_name)}"
-                >
-                    🗑
-                </button>
-
-            </td>
-
-        </tr>
-
-    `;
-}
-
-/* =========================================================
-   SEARCH STUDENTS
-   ========================================================= */
-
-function filterStudents() {
 
     const searchInput =
         document.getElementById(
             "studentSearch"
         );
 
-    if (!searchInput) return;
+    const search =
+        searchInput
+            ? searchInput.value
+                .trim()
+                .toLowerCase()
+            : "";
 
-    const query =
-        searchInput.value
-            .trim()
-            .toLowerCase();
 
-    if (!query) {
+    let filteredStudents =
+        studentsCache;
 
-        renderStudents(
-            studentsCache
-        );
+
+    if (search) {
+
+        filteredStudents =
+            studentsCache.filter(
+                function (student) {
+
+                    return (
+                        (
+                            student.full_name ||
+                            ""
+                        )
+                            .toLowerCase()
+                            .includes(search)
+                        ||
+                        (
+                            student.admission_number ||
+                            ""
+                        )
+                            .toLowerCase()
+                            .includes(search)
+                    );
+                }
+            );
+    }
+
+
+    if (
+        filteredStudents.length ===
+        0
+    ) {
+
+        container.innerHTML = `
+
+            <div class="empty-state">
+
+                <div class="empty-state-icon">
+                    👨‍🎓
+                </div>
+
+                <strong>
+                    ${
+                        search
+                            ? "No matching students"
+                            : "No students yet"
+                    }
+                </strong>
+
+                <p>
+                    ${
+                        search
+                            ? "Try a different search."
+                            : "Add your first student to begin."
+                    }
+                </p>
+
+                ${
+                    !search
+                        ? `
+                            <button
+                                type="button"
+                                class="dashboard-primary-btn"
+                                onclick="openStudentForm()"
+                            >
+                                + Add Student
+                            </button>
+                        `
+                        : ""
+                }
+
+            </div>
+        `;
 
         return;
     }
 
-    const filtered =
-        studentsCache.filter(
-            (student) => {
 
-                return (
+    let html = `
 
-                    (student.full_name || "")
-                        .toLowerCase()
-                        .includes(query)
+        <div class="students-table">
 
-                    ||
+            <div class="students-table-header">
 
-                    (student.admission_number || "")
-                        .toLowerCase()
-                        .includes(query)
+                <span>
+                    #
+                </span>
 
-                    ||
+                <span>
+                    Student
+                </span>
 
-                    (student.gender || "")
-                        .toLowerCase()
-                        .includes(query)
+                <span>
+                    Gender
+                </span>
 
-                );
-            }
-        );
+                <span>
+                    Admission No.
+                </span>
 
-    renderStudents(
-        filtered
+                <span>
+                    Class
+                </span>
+
+                <span>
+                    Action
+                </span>
+
+            </div>
+    `;
+
+
+    filteredStudents.forEach(
+        function (student, index) {
+
+            html += studentRow(
+                student,
+                index + 1
+            );
+        }
     );
+
+
+    html += `
+        </div>
+    `;
+
+
+    container.innerHTML =
+        html;
 }
 
+
 /* =========================================================
-   UPDATE STUDENT COUNTERS
+   19. STUDENT ROW
+   ========================================================= */
+
+function studentRow(
+    student,
+    serial
+) {
+
+    const genderClass =
+        student.gender === "Male"
+            ? "gender-male"
+            : student.gender === "Female"
+                ? "gender-female"
+                : "";
+
+
+    return `
+
+        <div class="student-table-row">
+
+            <span class="student-serial">
+                ${serial}
+            </span>
+
+
+            <div class="student-name-cell">
+
+                <div class="student-avatar">
+
+                    ${
+                        getInitials(
+                            student.full_name ||
+                            "Student"
+                        )
+                    }
+
+                </div>
+
+                <div>
+
+                    <strong>
+                        ${escapeHtml(
+                            student.full_name ||
+                            "Unnamed Student"
+                        )}
+                    </strong>
+
+                    ${
+                        student.date_of_birth
+                            ? `
+                                <small>
+                                    DOB:
+                                    ${escapeHtml(
+                                        student.date_of_birth
+                                    )}
+                                </small>
+                            `
+                            : ""
+                    }
+
+                </div>
+
+            </div>
+
+
+            <span>
+                ${
+                    student.gender
+                        ? `
+                            <span
+                                class="gender-badge ${genderClass}"
+                            >
+                                ${escapeHtml(
+                                    student.gender
+                                )}
+                            </span>
+                        `
+                        : "—"
+                }
+            </span>
+
+
+            <span>
+                ${
+                    student.admission_number
+                        ? escapeHtml(
+                            student.admission_number
+                        )
+                        : "—"
+                }
+            </span>
+
+
+            <span>
+                ${
+                    escapeHtml(
+                        student.class_name ||
+                        "—"
+                    )
+                }
+            </span>
+
+
+            <div class="student-action-cell">
+
+                <button
+                    type="button"
+                    class="student-delete-btn"
+                    onclick="deleteStudent('${student.id}')"
+                    title="Delete student"
+                >
+                    Delete
+                </button>
+
+            </div>
+
+        </div>
+    `;
+}
+
+
+/* =========================================================
+   20. FILTER STUDENTS
+   ========================================================= */
+
+function filterStudents() {
+    renderStudents();
+}
+
+
+/* =========================================================
+   21. UPDATE STUDENT COUNTERS
    ========================================================= */
 
 function updateStudentCounters() {
 
-    const count =
+    const total =
         studentsCache.length;
 
-    const studentCount =
+    const male =
+        studentsCache.filter(
+            student =>
+                student.gender === "Male"
+        ).length;
+
+    const female =
+        studentsCache.filter(
+            student =>
+                student.gender === "Female"
+        ).length;
+
+
+    const totalElement =
         document.getElementById(
-            "studentCount"
+            "studentTotalCount"
         );
 
-    if (studentCount) {
-        studentCount.textContent =
-            count;
+    const maleElement =
+        document.getElementById(
+            "studentMaleCount"
+        );
+
+    const femaleElement =
+        document.getElementById(
+            "studentFemaleCount"
+        );
+
+
+    if (totalElement) {
+        totalElement.textContent =
+            total;
     }
 
-    const dashboardCount =
+    if (maleElement) {
+        maleElement.textContent =
+            male;
+    }
+
+    if (femaleElement) {
+        femaleElement.textContent =
+            female;
+    }
+
+
+    const dashboardStudentCount =
         document.getElementById(
             "dashboardStudentCount"
         );
 
-    if (dashboardCount) {
-        dashboardCount.textContent =
-            count;
+    if (dashboardStudentCount) {
+        dashboardStudentCount.textContent =
+            total;
     }
 }
 
+
 /* =========================================================
-   DELETE STUDENT
+   22. DELETE STUDENT
    ========================================================= */
 
-async function deleteStudent(studentId) {
+async function deleteStudent(
+    studentId
+) {
 
-    if (!studentId) return;
+    if (!studentId) {
+        return;
+    }
 
-    const student =
-        studentsCache.find(
-            (item) =>
-                item.id === studentId
-        );
-
-    if (!student) return;
 
     const confirmed =
-        window.confirm(
-            `Are you sure you want to delete ${student.full_name}?`
+        confirm(
+            "Are you sure you want to delete this student?"
         );
+
 
     if (!confirmed) {
         return;
     }
+
 
     try {
 
@@ -2136,397 +2100,1051 @@ async function deleteStudent(studentId) {
                     currentUser.id
                 );
 
-        if (error) {
-            throw error;
-        }
 
-        studentsCache =
-            studentsCache.filter(
-                (item) =>
-                    item.id !== studentId
+        if (error) {
+
+            console.error(
+                "Delete student error:",
+                error
             );
 
-        sortStudents();
+            alert(
+                "Unable to delete student: " +
+                error.message
+            );
 
-        renderStudents(
-            studentsCache
-        );
+            return;
+        }
 
-        updateStudentCounters();
 
-        alert(
-            "Student deleted successfully."
-        );
+        await loadStudents();
+
+        await loadDashboardStats();
 
     } catch (error) {
 
         console.error(
-            "Delete student error:",
+            "Unexpected delete error:",
             error
         );
 
         alert(
-            getStudentErrorMessage(error)
+            "Something went wrong while deleting the student."
         );
     }
 }
 
-/* =========================================================
-   STUDENT ERROR MESSAGES
-   ========================================================= */
-
-function getStudentErrorMessage(error) {
-
-    const message =
-        error?.message?.toLowerCase() || "";
-
-    if (
-        message.includes(
-            "row-level security"
-        )
-    ) {
-
-        return (
-            "Permission denied by database security. " +
-            "Please make sure your teacher account is correctly authenticated."
-        );
-    }
-
-    if (
-        message.includes(
-            "duplicate"
-        )
-    ) {
-
-        return (
-            "This student record already exists."
-        );
-    }
-
-    return (
-        error?.message ||
-        "Unable to complete the student operation."
-    );
-}
 
 /* =========================================================
-   STUDENT FORM MESSAGE
+   23. STUDENT FORM ERROR
    ========================================================= */
 
-function showStudentFormMessage(
-    message,
-    type
+function showStudentFormError(
+    message
 ) {
 
-    const element =
+    const errorElement =
         document.getElementById(
-            "studentFormMessage"
+            "studentFormError"
         );
 
-    if (!element) return;
-
-    element.textContent =
-        message;
-
-    element.className =
-        "student-form-message " +
-        (type === "success"
-            ? "success"
-            : "error");
-
-    element.style.display =
-        "block";
-}
-
-function hideStudentFormMessage() {
-
-    const element =
-        document.getElementById(
-            "studentFormMessage"
-        );
-
-    if (!element) return;
-
-    element.style.display =
-        "none";
-
-    element.textContent =
-        "";
-}
-
-/* =========================================================
-   DASHBOARD NAVIGATION
-   ========================================================= */
-
-function showDashboardSection(
-    sectionName,
-    clickedButton = null
-) {
-
-    const sections =
-        document.querySelectorAll(
-            ".dashboard-section"
-        );
-
-    sections.forEach(
-        (section) => {
-
-            section.classList.remove(
-                "active"
-            );
-
-            if (
-                section.dataset.section ===
-                sectionName
-            ) {
-
-                section.classList.add(
-                    "active"
-                );
-            }
-        }
-    );
-
-    const navButtons =
-        document.querySelectorAll(
-            ".dashboard-nav-item"
-        );
-
-    navButtons.forEach(
-        (button) => {
-
-            button.classList.remove(
-                "active"
-            );
-        }
-    );
-
-    if (clickedButton) {
-
-        clickedButton.classList.add(
+    if (errorElement) {
+        errorElement.textContent =
+            message;
+        errorElement.classList.add(
             "active"
         );
-
-    } else {
-
-        navButtons.forEach(
-            (button) => {
-
-                const text =
-                    button.textContent
-                        .trim()
-                        .toLowerCase();
-
-                if (
-                    text.includes(
-                        sectionName.toLowerCase()
-                    )
-                ) {
-
-                    button.classList.add(
-                        "active"
-                    );
-                }
-            }
-        );
-    }
-
-    if (
-        sectionName ===
-        "students"
-    ) {
-
-        setTimeout(
-            () => {
-                loadStudents();
-            },
-            50
-        );
     }
 }
 
-/* =========================================================
-   LANDING PAGE
-   ========================================================= */
 
-function hideLandingPage() {
+function clearStudentFormError() {
 
-    const header =
-        document.querySelector(
-            ".header"
-        );
-
-    const main =
-        document.querySelector(
-            "main"
-        );
-
-    const footer =
-        document.querySelector(
-            "footer"
-        );
-
-    if (header) {
-        header.style.display =
-            "none";
-    }
-
-    if (main) {
-        main.style.display =
-            "none";
-    }
-
-    if (footer) {
-        footer.style.display =
-            "none";
-    }
-}
-
-function showLandingPage() {
-
-    const header =
-        document.querySelector(
-            ".header"
-        );
-
-    const main =
-        document.querySelector(
-            "main"
-        );
-
-    const footer =
-        document.querySelector(
-            "footer"
-        );
-
-    const dashboard =
+    const errorElement =
         document.getElementById(
-            "teacherDashboard"
+            "studentFormError"
         );
 
-    if (header) {
-        header.style.display =
-            "";
-    }
+    if (errorElement) {
 
-    if (main) {
-        main.style.display =
+        errorElement.textContent =
             "";
-    }
 
-    if (footer) {
-        footer.style.display =
-            "";
-    }
-
-    if (dashboard) {
-        dashboard.remove();
+        errorElement.classList.remove(
+            "active"
+        );
     }
 }
 
+
 /* =========================================================
-   PROFILE HELPERS
+   24. SUBJECT MANAGEMENT
    ========================================================= */
 
-function profileDetail(
-    label,
-    value
-) {
+function subjectManagementSection() {
 
     return `
 
-        <div class="profile-detail">
+        <section
+            class="dashboard-section"
+            data-section="subjects"
+        >
 
-            <span>
-                ${escapeHTML(label)}
-            </span>
+            <div class="dashboard-section-heading">
 
-            <strong>
-                ${escapeHTML(value)}
-            </strong>
+                <div>
 
-        </div>
+                    <span class="dashboard-label">
+                        SUBJECT MANAGEMENT
+                    </span>
+
+                    <h2>
+                        Subjects
+                    </h2>
+
+                    <p>
+                        Configure the subjects used
+                        for your class.
+                    </p>
+
+                </div>
+
+
+                <button
+                    type="button"
+                    class="dashboard-primary-btn"
+                    onclick="openSubjectForm()"
+                >
+                    + Add Subject
+                </button>
+
+            </div>
+
+
+            <div class="dashboard-panel">
+
+                <div class="panel-heading">
+
+                    <div>
+
+                        <span class="dashboard-label">
+                            SUBJECT LIST
+                        </span>
+
+                        <h3>
+                            Your Subjects
+                        </h3>
+
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="subjectsTableContainer"
+                    class="subjects-table-container"
+                >
+
+                    <div class="loading-state">
+                        Loading subjects...
+                    </div>
+
+                </div>
+
+            </div>
+
+        </section>
+
+
+        ${subjectFormModal()}
 
     `;
 }
 
-function getInitials(name) {
-
-    if (!name) {
-        return "CM";
-    }
-
-    const words =
-        name
-            .trim()
-            .split(/\s+/);
-
-    if (words.length === 1) {
-
-        return words[0]
-            .substring(0, 2)
-            .toUpperCase();
-    }
-
-    return (
-        words[0].charAt(0) +
-        words[words.length - 1].charAt(0)
-    ).toUpperCase();
-}
-
-function getUserDisplayName(user) {
-
-    if (!user) {
-        return "Teacher";
-    }
-
-    const metadata =
-        user.user_metadata || {};
-
-    return (
-        metadata.full_name ||
-        metadata.name ||
-        user.email?.split("@")[0] ||
-        "Teacher"
-    );
-}
 
 /* =========================================================
-   DATE FORMAT
+   25. SUBJECT FORM
    ========================================================= */
 
-function formatDate(dateValue) {
+function subjectFormModal() {
 
-    if (!dateValue) {
-        return "—";
-    }
+    return `
 
-    const date =
-        new Date(
-            dateValue +
-            "T00:00:00"
+        <div
+            id="subjectFormModal"
+            class="student-form-modal"
+            aria-hidden="true"
+        >
+
+            <div
+                class="student-form-content"
+                role="dialog"
+                aria-modal="true"
+                aria-labelledby="subjectFormTitle"
+            >
+
+                <button
+                    type="button"
+                    class="student-form-close"
+                    onclick="closeSubjectForm()"
+                >
+                    ×
+                </button>
+
+
+                <div class="student-form-header">
+
+                    <span class="dashboard-label">
+                        SUBJECT RECORD
+                    </span>
+
+                    <h3 id="subjectFormTitle">
+                        Add Subject
+                    </h3>
+
+                    <p>
+                        Add a subject for this class.
+                    </p>
+
+                </div>
+
+
+                <form
+                    id="subjectForm"
+                    onsubmit="saveSubject(event)"
+                >
+
+                    <div class="form-grid">
+
+                        <div class="form-field form-field-full">
+
+                            <label for="subjectName">
+                                Subject Name
+                            </label>
+
+                            <input
+                                type="text"
+                                id="subjectName"
+                                placeholder="e.g. Mathematics"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label for="subjectCode">
+                                Subject Code
+                            </label>
+
+                            <input
+                                type="text"
+                                id="subjectCode"
+                                placeholder="Optional"
+                            >
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label for="subjectClass">
+                                Class
+                            </label>
+
+                            <input
+                                type="text"
+                                id="subjectClass"
+                                value="${
+                                    teacherProfile?.class_name ||
+                                    ""
+                                }"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label for="subjectSession">
+                                Session
+                            </label>
+
+                            <input
+                                type="text"
+                                id="subjectSession"
+                                value="${
+                                    teacherProfile?.session ||
+                                    ""
+                                }"
+                                required
+                            >
+
+                        </div>
+
+
+                        <div class="form-field">
+
+                            <label for="subjectTerm">
+                                Term
+                            </label>
+
+                            <input
+                                type="text"
+                                id="subjectTerm"
+                                value="${
+                                    teacherProfile?.term ||
+                                    ""
+                                }"
+                                required
+                            >
+
+                        </div>
+
+                    </div>
+
+
+                    <div
+                        id="subjectFormError"
+                        class="form-error"
+                    ></div>
+
+
+                    <div class="student-form-actions">
+
+                        <button
+                            type="button"
+                            class="dashboard-secondary-btn"
+                            onclick="closeSubjectForm()"
+                        >
+                            Cancel
+                        </button>
+
+
+                        <button
+                            type="submit"
+                            class="dashboard-primary-btn"
+                        >
+                            Save Subject
+                        </button>
+
+                    </div>
+
+                </form>
+
+            </div>
+
+        </div>
+    `;
+}
+
+
+/* =========================================================
+   26. OPEN SUBJECT FORM
+   ========================================================= */
+
+function openSubjectForm() {
+
+    const modal =
+        document.getElementById(
+            "subjectFormModal"
         );
 
-    if (
-        Number.isNaN(
-            date.getTime()
-        )
-    ) {
-        return dateValue;
+    if (!modal) {
+        return;
     }
 
-    return date.toLocaleDateString(
-        "en-GB",
-        {
-            day: "2-digit",
-            month: "short",
-            year: "numeric"
-        }
+
+    const form =
+        document.getElementById(
+            "subjectForm"
+        );
+
+    if (form) {
+        form.reset();
+    }
+
+
+    const subjectClass =
+        document.getElementById(
+            "subjectClass"
+        );
+
+    const subjectSession =
+        document.getElementById(
+            "subjectSession"
+        );
+
+    const subjectTerm =
+        document.getElementById(
+            "subjectTerm"
+        );
+
+
+    if (subjectClass) {
+        subjectClass.value =
+            teacherProfile?.class_name ||
+            "";
+    }
+
+    if (subjectSession) {
+        subjectSession.value =
+            teacherProfile?.session ||
+            "";
+    }
+
+    if (subjectTerm) {
+        subjectTerm.value =
+            teacherProfile?.term ||
+            "";
+    }
+
+
+    clearSubjectFormError();
+
+
+    modal.classList.add(
+        "active"
+    );
+
+    modal.setAttribute(
+        "aria-hidden",
+        "false"
     );
 }
 
+
 /* =========================================================
-   COMING SOON SECTION
+   27. CLOSE SUBJECT FORM
+   ========================================================= */
+
+function closeSubjectForm() {
+
+    const modal =
+        document.getElementById(
+            "subjectFormModal"
+        );
+
+    if (modal) {
+
+        modal.classList.remove(
+            "active"
+        );
+
+        modal.setAttribute(
+            "aria-hidden",
+            "true"
+        );
+    }
+}
+
+
+/* =========================================================
+   28. SAVE SUBJECT
+   ========================================================= */
+
+async function saveSubject(event) {
+
+    event.preventDefault();
+
+
+    if (!currentUser) {
+
+        showSubjectFormError(
+            "You must be logged in."
+        );
+
+        return;
+    }
+
+
+    const subjectName =
+        document
+            .getElementById(
+                "subjectName"
+            )
+            .value
+            .trim();
+
+
+    const subjectCode =
+        document
+            .getElementById(
+                "subjectCode"
+            )
+            .value
+            .trim() || null;
+
+
+    const className =
+        document
+            .getElementById(
+                "subjectClass"
+            )
+            .value
+            .trim();
+
+
+    const session =
+        document
+            .getElementById(
+                "subjectSession"
+            )
+            .value
+            .trim();
+
+
+    const term =
+        document
+            .getElementById(
+                "subjectTerm"
+            )
+            .value
+            .trim();
+
+
+    if (!subjectName) {
+
+        showSubjectFormError(
+            "Please enter the subject name."
+        );
+
+        return;
+    }
+
+
+    if (!className) {
+
+        showSubjectFormError(
+            "Please enter the class."
+        );
+
+        return;
+    }
+
+
+    if (!session) {
+
+        showSubjectFormError(
+            "Please enter the academic session."
+        );
+
+        return;
+    }
+
+
+    if (!term) {
+
+        showSubjectFormError(
+            "Please enter the term."
+        );
+
+        return;
+    }
+
+
+    const submitButton =
+        document.querySelector(
+            "#subjectForm button[type='submit']"
+        );
+
+
+    if (submitButton) {
+
+        submitButton.disabled =
+            true;
+
+        submitButton.textContent =
+            "Saving...";
+    }
+
+
+    try {
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .from("subjects")
+                .insert([
+                    {
+                        teacher_id:
+                            currentUser.id,
+
+                        subject_name:
+                            subjectName,
+
+                        subject_code:
+                            subjectCode,
+
+                        class_name:
+                            className,
+
+                        session:
+                            session,
+
+                        term:
+                            term
+                    }
+                ]);
+
+
+        if (error) {
+
+            console.error(
+                "Subject insert error:",
+                error
+            );
+
+            showSubjectFormError(
+                error.message
+            );
+
+            return;
+        }
+
+
+        closeSubjectForm();
+
+        await loadSubjects();
+
+        await loadDashboardStats();
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected subject save error:",
+            error
+        );
+
+        showSubjectFormError(
+            "Unable to save subject. Please try again."
+        );
+
+    } finally {
+
+        if (submitButton) {
+
+            submitButton.disabled =
+                false;
+
+            submitButton.textContent =
+                "Save Subject";
+        }
+    }
+}
+
+
+/* =========================================================
+   29. LOAD SUBJECTS
+   ========================================================= */
+
+async function loadSubjects() {
+
+    const container =
+        document.getElementById(
+            "subjectsTableContainer"
+        );
+
+
+    if (!currentUser) {
+        return;
+    }
+
+
+    try {
+
+        if (container) {
+
+            container.innerHTML = `
+                <div class="loading-state">
+                    Loading subjects...
+                </div>
+            `;
+        }
+
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .from("subjects")
+                .select("*")
+                .eq(
+                    "teacher_id",
+                    currentUser.id
+                )
+                .order(
+                    "subject_name",
+                    {
+                        ascending: true
+                    }
+                );
+
+
+        if (error) {
+
+            console.error(
+                "Load subjects error:",
+                error
+            );
+
+            if (container) {
+
+                container.innerHTML = `
+                    <div class="empty-state">
+
+                        <strong>
+                            Unable to load subjects
+                        </strong>
+
+                        <p>
+                            ${escapeHtml(
+                                error.message
+                            )}
+                        </p>
+
+                    </div>
+                `;
+            }
+
+            return;
+        }
+
+
+        subjectsCache =
+            data || [];
+
+
+        renderSubjects();
+
+
+        const dashboardSubjectCount =
+            document.getElementById(
+                "dashboardSubjectCount"
+            );
+
+        if (
+            dashboardSubjectCount
+        ) {
+
+            dashboardSubjectCount.textContent =
+                subjectsCache.length;
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected load subjects error:",
+            error
+        );
+    }
+}
+
+
+/* =========================================================
+   30. RENDER SUBJECTS
+   ========================================================= */
+
+function renderSubjects() {
+
+    const container =
+        document.getElementById(
+            "subjectsTableContainer"
+        );
+
+
+    if (!container) {
+        return;
+    }
+
+
+    if (
+        subjectsCache.length ===
+        0
+    ) {
+
+        container.innerHTML = `
+
+            <div class="empty-state">
+
+                <div class="empty-state-icon">
+                    📚
+                </div>
+
+                <strong>
+                    No subjects yet
+                </strong>
+
+                <p>
+                    Add your first subject
+                    to begin managing marks.
+                </p>
+
+
+                <button
+                    type="button"
+                    class="dashboard-primary-btn"
+                    onclick="openSubjectForm()"
+                >
+                    + Add Subject
+                </button>
+
+            </div>
+        `;
+
+        return;
+    }
+
+
+    let html = `
+
+        <div class="subjects-table">
+
+            <div class="subjects-table-header">
+
+                <span>
+                    #
+                </span>
+
+                <span>
+                    Subject
+                </span>
+
+                <span>
+                    Code
+                </span>
+
+                <span>
+                    Class
+                </span>
+
+                <span>
+                    Session
+                </span>
+
+                <span>
+                    Term
+                </span>
+
+                <span>
+                    Action
+                </span>
+
+            </div>
+    `;
+
+
+    subjectsCache.forEach(
+        function (subject, index) {
+
+            html += `
+
+                <div class="subject-table-row">
+
+                    <span>
+                        ${index + 1}
+                    </span>
+
+
+                    <strong>
+                        ${escapeHtml(
+                            subject.subject_name ||
+                            "Unnamed Subject"
+                        )}
+                    </strong>
+
+
+                    <span>
+                        ${
+                            subject.subject_code
+                                ? escapeHtml(
+                                    subject.subject_code
+                                )
+                                : "—"
+                        }
+                    </span>
+
+
+                    <span>
+                        ${escapeHtml(
+                            subject.class_name ||
+                            "—"
+                        )}
+                    </span>
+
+
+                    <span>
+                        ${escapeHtml(
+                            subject.session ||
+                            "—"
+                        )}
+                    </span>
+
+
+                    <span>
+                        ${escapeHtml(
+                            subject.term ||
+                            "—"
+                        )}
+                    </span>
+
+
+                    <div>
+
+                        <button
+                            type="button"
+                            class="student-delete-btn"
+                            onclick="deleteSubject('${subject.id}')"
+                        >
+                            Delete
+                        </button>
+
+                    </div>
+
+                </div>
+            `;
+        }
+    );
+
+
+    html += `
+        </div>
+    `;
+
+
+    container.innerHTML =
+        html;
+}
+
+
+/* =========================================================
+   31. DELETE SUBJECT
+   ========================================================= */
+
+async function deleteSubject(
+    subjectId
+) {
+
+    if (!subjectId) {
+        return;
+    }
+
+
+    const confirmed =
+        confirm(
+            "Are you sure you want to delete this subject?"
+        );
+
+
+    if (!confirmed) {
+        return;
+    }
+
+
+    try {
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .from("subjects")
+                .delete()
+                .eq(
+                    "id",
+                    subjectId
+                )
+                .eq(
+                    "teacher_id",
+                    currentUser.id
+                );
+
+
+        if (error) {
+
+            console.error(
+                "Delete subject error:",
+                error
+            );
+
+            alert(
+                "Unable to delete subject: " +
+                error.message
+            );
+
+            return;
+        }
+
+
+        await loadSubjects();
+
+        await loadDashboardStats();
+
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected delete subject error:",
+            error
+        );
+
+        alert(
+            "Something went wrong while deleting the subject."
+        );
+    }
+}
+
+
+/* =========================================================
+   32. SUBJECT FORM ERROR
+   ========================================================= */
+
+function showSubjectFormError(
+    message
+) {
+
+    const errorElement =
+        document.getElementById(
+            "subjectFormError"
+        );
+
+    if (errorElement) {
+
+        errorElement.textContent =
+            message;
+
+        errorElement.classList.add(
+            "active"
+        );
+    }
+}
+
+
+function clearSubjectFormError() {
+
+    const errorElement =
+        document.getElementById(
+            "subjectFormError"
+        );
+
+    if (errorElement) {
+
+        errorElement.textContent =
+            "";
+
+        errorElement.classList.remove(
+            "active"
+        );
+    }
+}
+
+
+/* =========================================================
+   33. OTHER DASHBOARD SECTIONS
    ========================================================= */
 
 function comingSoonSection(
@@ -2536,76 +3154,429 @@ function comingSoonSection(
 
     return `
 
-        <div class="coming-soon-card">
+        <section
+            class="dashboard-section"
+        >
 
-            <div class="coming-soon-icon">
-                CM
+            <div class="dashboard-section-heading">
+
+                <div>
+
+                    <span class="dashboard-label">
+                        CLASSMARK
+                    </span>
+
+                    <h2>
+                        ${escapeHtml(title)}
+                    </h2>
+
+                    <p>
+                        ${escapeHtml(description)}
+                    </p>
+
+                </div>
+
             </div>
 
-            <span class="dashboard-eyebrow">
-                CLASSMARK MODULE
-            </span>
 
-            <h2>
-                ${escapeHTML(title)}
-            </h2>
+            <div class="dashboard-panel">
 
-            <p>
-                ${escapeHTML(description)}
-            </p>
+                <div class="coming-soon">
 
-            <span class="coming-soon-status">
-                Module prepared — database connection coming next
-            </span>
+                    <div class="coming-soon-icon">
+                        ✦
+                    </div>
 
-        </div>
+                    <h3>
+                        Coming Soon
+                    </h3>
 
+                    <p>
+                        This module is part of
+                        the ClassMark roadmap and
+                        will be activated soon.
+                    </p>
+
+                </div>
+
+            </div>
+
+        </section>
     `;
 }
 
+
 /* =========================================================
-   SECURITY — ESCAPE HTML
+   34. SHOW DASHBOARD SECTION
    ========================================================= */
 
-function escapeHTML(value) {
+function showDashboardSection(
+    sectionName
+) {
+
+    const content =
+        document.getElementById(
+            "dashboardContent"
+        );
+
+
+    if (!content) {
+        return;
+    }
+
+
+    let html = "";
+
+
+    switch (sectionName) {
+
+        case "overview":
+
+            html =
+                overviewSection();
+
+            break;
+
+
+        case "students":
+
+            html =
+                studentManagementSection();
+
+            break;
+
+
+        case "subjects":
+
+            html =
+                subjectManagementSection();
+
+            break;
+
+
+        case "marks":
+
+            html =
+                comingSoonSection(
+                    "Enter Marks",
+                    "Record CA and examination marks for each subject."
+                );
+
+            break;
+
+
+        case "ocr":
+
+            html =
+                comingSoonSection(
+                    "Score Sheet OCR",
+                    "Upload score sheets and extract marks using OCR."
+                );
+
+            break;
+
+
+        case "attendance":
+
+            html =
+                comingSoonSection(
+                    "Attendance",
+                    "Record student attendance and calculate attendance percentages."
+                );
+
+            break;
+
+
+        case "results":
+
+            html =
+                comingSoonSection(
+                    "Generate Results",
+                    "Calculate totals, averages, grades and class positions."
+                );
+
+            break;
+
+
+        case "reports":
+
+            html =
+                comingSoonSection(
+                    "Reports",
+                    "Generate professional student and class result reports."
+                );
+
+            break;
+
+
+        case "settings":
+
+            html =
+                comingSoonSection(
+                    "Settings",
+                    "Manage your ClassMark classroom settings."
+                );
+
+            break;
+
+
+        default:
+
+            html =
+                overviewSection();
+    }
+
+
+    content.innerHTML =
+        html;
+
+
+    updateActiveDashboardNav(
+        sectionName
+    );
+
 
     if (
-        value === null ||
-        value === undefined
+        sectionName ===
+        "students"
+    ) {
+
+        loadStudents();
+    }
+
+
+    if (
+        sectionName ===
+        "subjects"
+    ) {
+
+        loadSubjects();
+    }
+}
+
+
+/* =========================================================
+   35. ACTIVE NAVIGATION
+   ========================================================= */
+
+function updateActiveDashboardNav(
+    sectionName
+) {
+
+    const buttons =
+        document.querySelectorAll(
+            ".dashboard-nav-item"
+        );
+
+
+    buttons.forEach(
+        function (button) {
+
+            button.classList.remove(
+                "active"
+            );
+
+            const onclick =
+                button.getAttribute(
+                    "onclick"
+                ) || "";
+
+            if (
+                onclick.includes(
+                    "'" +
+                    sectionName +
+                    "'"
+                )
+            ) {
+
+                button.classList.add(
+                    "active"
+                );
+            }
+        }
+    );
+}
+
+
+/* =========================================================
+   36. DASHBOARD STATS
+   ========================================================= */
+
+async function loadDashboardStats() {
+
+    if (!currentUser) {
+        return;
+    }
+
+
+    try {
+
+        const studentResult =
+            await supabaseClient
+                .from("students")
+                .select(
+                    "id",
+                    {
+                        count: "exact",
+                        head: true
+                    }
+                )
+                .eq(
+                    "teacher_id",
+                    currentUser.id
+                );
+
+
+        const subjectResult =
+            await supabaseClient
+                .from("subjects")
+                .select(
+                    "id",
+                    {
+                        count: "exact",
+                        head: true
+                    }
+                )
+                .eq(
+                    "teacher_id",
+                    currentUser.id
+                );
+
+
+        const studentCount =
+            studentResult.count || 0;
+
+        const subjectCount =
+            subjectResult.count || 0;
+
+
+        const studentElement =
+            document.getElementById(
+                "dashboardStudentCount"
+            );
+
+        const subjectElement =
+            document.getElementById(
+                "dashboardSubjectCount"
+            );
+
+
+        if (studentElement) {
+
+            studentElement.textContent =
+                studentCount;
+        }
+
+
+        if (subjectElement) {
+
+            subjectElement.textContent =
+                subjectCount;
+        }
+
+
+    } catch (error) {
+
+        console.error(
+            "Dashboard stats error:",
+            error
+        );
+    }
+}
+
+
+/* =========================================================
+   37. INITIALIZE
+   ========================================================= */
+
+document.addEventListener(
+    "DOMContentLoaded",
+    function () {
+
+        checkAuthSession();
+
+    }
+);
+
+
+/* =========================================================
+   38. HELPERS
+   ========================================================= */
+
+function getInitials(
+    name
+) {
+
+    if (!name) {
+        return "CM";
+    }
+
+
+    const words =
+        name
+            .trim()
+            .split(/\s+/)
+            .filter(Boolean);
+
+
+    if (
+        words.length ===
+        1
+    ) {
+
+        return words[0]
+            .substring(0, 2)
+            .toUpperCase();
+    }
+
+
+    return (
+        words[0][0] +
+        words[words.length - 1][0]
+    ).toUpperCase();
+}
+
+
+function escapeHtml(
+    value
+) {
+
+    if (
+        value ===
+        null ||
+        value ===
+        undefined
     ) {
         return "";
     }
 
-    return String(value)
 
+    return String(value)
         .replace(
             /&/g,
             "&amp;"
         )
-
         .replace(
             /</g,
             "&lt;"
         )
-
         .replace(
             />/g,
             "&gt;"
         )
-
         .replace(
             /"/g,
             "&quot;"
         )
-
         .replace(
             /'/g,
             "&#039;"
         );
 }
 
+
 /* =========================================================
-   DASHBOARD STYLES
+   39. DASHBOARD STYLES
    ========================================================= */
 
 function addDashboardStyles() {
@@ -2618,1005 +3589,930 @@ function addDashboardStyles() {
         return;
     }
 
+
     const style =
         document.createElement(
             "style"
         );
 
+
     style.id =
         "classmarkDashboardStyles";
 
+
     style.textContent = `
 
-        #teacherDashboard {
-            min-height: 100vh;
-            background: #f4f7fb;
+        .teacher-dashboard {
+            position: fixed;
+            inset: 0;
+            z-index: 99999;
+            background: #f5f7fb;
+            overflow: auto;
             color: #111827;
-            font-family: Arial, sans-serif;
         }
+
 
         .dashboard-shell {
             min-height: 100vh;
+            display: flex;
         }
 
-        .dashboard-topbar {
-            height: 76px;
-            background: #0b1220;
-            color: #ffffff;
+
+        .dashboard-sidebar {
+            width: 260px;
+            background: #07101d;
+            color: white;
+            padding: 22px 16px;
             display: flex;
-            align-items: center;
-            justify-content: space-between;
-            padding: 0 32px;
-            gap: 20px;
+            flex-direction: column;
+            position: sticky;
+            top: 0;
+            height: 100vh;
         }
+
 
         .dashboard-brand {
             display: flex;
             align-items: center;
             gap: 12px;
+            padding: 8px;
+            margin-bottom: 28px;
         }
 
+
         .dashboard-brand-icon {
-            width: 42px;
-            height: 42px;
-            border-radius: 10px;
-            display: grid;
-            place-items: center;
-            background: #d4af37;
-            color: #0b1220;
-            font-weight: 800;
+            width: 44px;
+            height: 44px;
+            border-radius: 12px;
+            background: linear-gradient(
+                135deg,
+                #d4af37,
+                #f3d77a
+            );
+            color: #07101d;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 900;
         }
+
 
         .dashboard-brand strong {
             display: block;
             font-size: 18px;
         }
 
+
         .dashboard-brand span {
             display: block;
-            font-size: 12px;
-            opacity: .65;
-            margin-top: 2px;
-        }
-
-        .dashboard-user {
-            display: flex;
-            align-items: center;
-            gap: 18px;
-        }
-
-        .dashboard-user-info {
-            text-align: right;
-        }
-
-        .dashboard-user-info strong {
-            display: block;
-            font-size: 14px;
-        }
-
-        .dashboard-user-info span {
-            display: block;
-            font-size: 12px;
-            opacity: .65;
+            color: #9ca3af;
+            font-size: 11px;
             margin-top: 3px;
         }
 
-        .dashboard-logout {
-            border: 1px solid rgba(255,255,255,.25);
-            background: transparent;
-            color: white;
-            padding: 9px 14px;
-            border-radius: 8px;
-            cursor: pointer;
-        }
-
-        .dashboard-logout:hover {
-            background: rgba(255,255,255,.08);
-        }
-
-        .dashboard-layout {
-            min-height: calc(100vh - 76px);
-            display: flex;
-        }
-
-        .dashboard-sidebar {
-            width: 250px;
-            flex-shrink: 0;
-            background: #ffffff;
-            border-right: 1px solid #e5e7eb;
-            padding: 24px 14px;
-        }
-
-        .sidebar-profile {
-            text-align: center;
-            padding: 8px 10px 24px;
-            border-bottom: 1px solid #edf0f4;
-            margin-bottom: 16px;
-        }
-
-        .profile-avatar {
-            width: 58px;
-            height: 58px;
-            margin: 0 auto 10px;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            background: #0b1220;
-            color: #d4af37;
-            font-weight: 800;
-            font-size: 18px;
-        }
-
-        .sidebar-profile strong {
-            display: block;
-            font-size: 14px;
-        }
-
-        .sidebar-profile span {
-            display: block;
-            font-size: 12px;
-            color: #6b7280;
-            margin-top: 4px;
-        }
 
         .dashboard-nav {
             display: grid;
-            gap: 5px;
+            gap: 7px;
         }
+
 
         .dashboard-nav-item {
             width: 100%;
             border: 0;
             background: transparent;
-            color: #4b5563;
+            color: #cbd5e1;
+            padding: 12px 13px;
+            border-radius: 10px;
             text-align: left;
-            padding: 11px 12px;
-            border-radius: 8px;
             cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 10px;
+            gap: 11px;
             font-size: 13px;
+            transition: .2s ease;
         }
 
-        .dashboard-nav-item span {
-            width: 22px;
-            text-align: center;
-        }
 
-        .dashboard-nav-item:hover {
-            background: #f3f6fa;
-            color: #0b1220;
-        }
-
+        .dashboard-nav-item:hover,
         .dashboard-nav-item.active {
-            background: #0b1220;
-            color: #ffffff;
+            background: rgba(
+                212,
+                175,
+                55,
+                .12
+            );
+            color: #f3d77a;
         }
+
+
+        .dashboard-logout {
+            margin-top: auto;
+            border: 1px solid rgba(
+                255,
+                255,
+                255,
+                .08
+            );
+            background: transparent;
+            color: #cbd5e1;
+            padding: 11px 13px;
+            border-radius: 10px;
+            cursor: pointer;
+            text-align: left;
+        }
+
 
         .dashboard-main {
             flex: 1;
-            padding: 34px;
             min-width: 0;
         }
 
-        .dashboard-section {
-            display: none;
+
+        .dashboard-topbar {
+            min-height: 82px;
+            background: white;
+            border-bottom: 1px solid #e5e7eb;
+            padding: 18px 28px;
+            display: flex;
+            align-items: center;
+            justify-content: space-between;
+            gap: 20px;
         }
 
-        .dashboard-section.active {
-            display: block;
-        }
 
-        .dashboard-welcome {
-            margin-bottom: 28px;
-        }
-
-        .dashboard-eyebrow {
-            display: inline-block;
-            color: #9a7b18;
-            font-size: 11px;
+        .dashboard-kicker,
+        .dashboard-label {
+            color: #b08b16;
+            font-size: 10px;
             font-weight: 800;
-            letter-spacing: 1.2px;
+            letter-spacing: .12em;
+            margin: 0 0 6px;
         }
 
-        .dashboard-welcome h1 {
-            margin: 7px 0 8px;
-            font-size: 32px;
-            line-height: 1.15;
-        }
 
-        .dashboard-welcome p {
+        .dashboard-topbar h1 {
             margin: 0;
+            font-size: 22px;
+            color: #111827;
+        }
+
+
+        .teacher-profile-mini {
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+
+        .teacher-profile-mini strong {
+            display: block;
+            font-size: 13px;
+        }
+
+
+        .teacher-profile-mini span {
+            display: block;
+            font-size: 11px;
             color: #6b7280;
-            max-width: 680px;
-            line-height: 1.6;
+            margin-top: 3px;
         }
 
-        .teacher-profile-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 24px;
-            margin-bottom: 24px;
-            box-shadow: 0 8px 24px rgba(15,23,42,.05);
+
+        .teacher-avatar {
+            width: 40px;
+            height: 40px;
+            border-radius: 50%;
+            background: #0b1220;
+            color: #f3d77a;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 12px;
+            font-weight: 800;
         }
 
-        .profile-card-header {
+
+        .dashboard-content {
+            padding: 28px;
+        }
+
+
+        .dashboard-section-heading {
             display: flex;
             justify-content: space-between;
             align-items: flex-start;
             gap: 20px;
+            margin-bottom: 24px;
+        }
+
+
+        .dashboard-section-heading h2 {
+            margin: 0;
+            font-size: 27px;
+            color: #111827;
+        }
+
+
+        .dashboard-section-heading p {
+            margin: 8px 0 0;
+            color: #6b7280;
+            max-width: 650px;
+            line-height: 1.6;
+        }
+
+
+        .dashboard-stat-grid {
+            display: grid;
+            grid-template-columns: repeat(
+                4,
+                minmax(0, 1fr)
+            );
+            gap: 15px;
             margin-bottom: 20px;
         }
 
-        .profile-card-header h2 {
-            margin: 6px 0 0;
-            font-size: 20px;
-        }
-
-        .profile-status {
-            background: #ecfdf5;
-            color: #047857;
-            border: 1px solid #a7f3d0;
-            border-radius: 999px;
-            padding: 7px 11px;
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        .profile-details-grid {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px;
-        }
-
-        .profile-detail {
-            background: #f8fafc;
-            border: 1px solid #eef2f7;
-            border-radius: 10px;
-            padding: 13px;
-        }
-
-        .profile-detail span {
-            display: block;
-            color: #6b7280;
-            font-size: 11px;
-            margin-bottom: 5px;
-        }
-
-        .profile-detail strong {
-            display: block;
-            font-size: 13px;
-            overflow-wrap: anywhere;
-        }
-
-        .dashboard-stats {
-            display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 14px;
-            margin-bottom: 30px;
-        }
 
         .dashboard-stat-card {
-            background: #ffffff;
+            background: white;
             border: 1px solid #e5e7eb;
             border-radius: 14px;
-            padding: 20px;
+            padding: 18px;
+            display: flex;
+            align-items: center;
+            gap: 14px;
         }
 
-        .dashboard-stat-card span {
+
+        .stat-icon {
+            width: 43px;
+            height: 43px;
+            border-radius: 11px;
+            background: #fff8df;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 18px;
+        }
+
+
+        .dashboard-stat-card small {
             display: block;
             color: #6b7280;
-            font-size: 12px;
+            font-size: 11px;
         }
+
 
         .dashboard-stat-card strong {
             display: block;
-            font-size: 28px;
-            margin: 8px 0 4px;
-            color: #0b1220;
+            font-size: 23px;
+            margin-top: 3px;
         }
 
-        .dashboard-stat-card small {
-            color: #9ca3af;
-            font-size: 11px;
+
+        .dashboard-two-column {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 20px;
         }
 
-        .quick-actions h2 {
-            font-size: 20px;
-            margin: 0 0 14px;
+
+        .dashboard-panel {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 15px;
+            padding: 20px;
         }
+
+
+        .panel-heading {
+            display: flex;
+            justify-content: space-between;
+            margin-bottom: 18px;
+        }
+
+
+        .panel-heading h3 {
+            margin: 0;
+            font-size: 18px;
+        }
+
+
+        .class-info-list {
+            display: grid;
+            gap: 13px;
+        }
+
+
+        .class-info-list > div {
+            display: flex;
+            justify-content: space-between;
+            gap: 15px;
+            padding-bottom: 12px;
+            border-bottom: 1px solid #eef0f4;
+        }
+
+
+        .class-info-list span {
+            color: #6b7280;
+            font-size: 12px;
+        }
+
+
+        .class-info-list strong {
+            text-align: right;
+            font-size: 13px;
+        }
+
 
         .quick-action-grid {
             display: grid;
-            grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 14px;
+            grid-template-columns: 1fr 1fr;
+            gap: 10px;
         }
+
 
         .quick-action-grid button {
             border: 1px solid #e5e7eb;
-            background: #ffffff;
-            border-radius: 14px;
-            padding: 20px;
+            background: #f9fafb;
+            border-radius: 11px;
+            padding: 13px;
             text-align: left;
             cursor: pointer;
-            transition: .2s ease;
+            color: #111827;
+            font-size: 12px;
         }
 
+
         .quick-action-grid button:hover {
-            transform: translateY(-2px);
             border-color: #d4af37;
-            box-shadow: 0 8px 20px rgba(15,23,42,.07);
+            background: #fffdf4;
         }
+
 
         .quick-action-grid span {
             display: block;
-            font-size: 25px;
-            margin-bottom: 12px;
-        }
-
-        .quick-action-grid strong {
-            display: block;
-            font-size: 14px;
-            color: #111827;
-        }
-
-        .quick-action-grid small {
-            display: block;
-            color: #6b7280;
-            margin-top: 5px;
-            line-height: 1.4;
-        }
-
-        .coming-soon-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 50px 30px;
-            text-align: center;
-            max-width: 720px;
-            margin: 40px auto;
-            box-shadow: 0 8px 24px rgba(15,23,42,.05);
-        }
-
-        .coming-soon-icon {
-            width: 64px;
-            height: 64px;
-            margin: 0 auto 18px;
-            border-radius: 14px;
-            display: grid;
-            place-items: center;
-            background: #0b1220;
-            color: #d4af37;
-            font-weight: 800;
-        }
-
-        .coming-soon-card h2 {
-            margin: 8px 0;
-            font-size: 25px;
-        }
-
-        .coming-soon-card p {
-            color: #6b7280;
-            line-height: 1.6;
-            max-width: 560px;
-            margin: 0 auto 20px;
-        }
-
-        .coming-soon-status {
-            display: inline-block;
-            color: #9a7b18;
-            background: #fffbeb;
-            border: 1px solid #fde68a;
-            border-radius: 999px;
-            padding: 8px 12px;
-            font-size: 11px;
-            font-weight: 700;
+            margin-bottom: 7px;
+            font-size: 17px;
         }
 
 
-        /* =====================================================
-           STUDENT MANAGEMENT
-           ===================================================== */
-
-        .student-page {
-            width: 100%;
-        }
-
-        .student-page-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-end;
-            gap: 20px;
-            margin-bottom: 26px;
-        }
-
-        .student-page-header h1 {
-            margin: 7px 0 8px;
-            font-size: 32px;
-            line-height: 1.15;
-        }
-
-        .student-page-header p {
-            margin: 0;
-            color: #6b7280;
-            line-height: 1.6;
-        }
-
-        .student-primary-btn,
-        .student-secondary-btn {
+        .dashboard-primary-btn {
             border: 0;
-            border-radius: 9px;
+            background: linear-gradient(
+                135deg,
+                #c49a22,
+                #e1c45b
+            );
+            color: #111827;
             padding: 11px 16px;
-            font-size: 13px;
-            font-weight: 700;
+            border-radius: 9px;
+            font-weight: 800;
             cursor: pointer;
-            transition: .2s ease;
+            font-size: 12px;
         }
 
-        .student-primary-btn {
-            background: #0b1220;
-            color: #ffffff;
-            border: 1px solid #0b1220;
-        }
 
-        .student-primary-btn:hover {
-            background: #18243a;
+        .dashboard-primary-btn:hover {
             transform: translateY(-1px);
         }
 
-        .student-primary-btn:disabled {
-            opacity: .55;
+
+        .dashboard-primary-btn:disabled {
+            opacity: .6;
             cursor: not-allowed;
-            transform: none;
         }
 
-        .student-secondary-btn {
-            background: #ffffff;
+
+        .dashboard-secondary-btn {
+            border: 1px solid #d8dde5;
+            background: white;
             color: #374151;
-            border: 1px solid #d1d5db;
-        }
-
-        .student-secondary-btn:hover {
-            background: #f9fafb;
-        }
-
-        .student-form-container {
-            margin-bottom: 22px;
-        }
-
-        .student-form-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 24px;
-            box-shadow: 0 8px 24px rgba(15,23,42,.05);
-        }
-
-        .student-form-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: flex-start;
-            gap: 20px;
-            margin-bottom: 22px;
-        }
-
-        .student-form-header h2 {
-            margin: 6px 0 0;
-            font-size: 21px;
-        }
-
-        .student-close-btn {
-            width: 34px;
-            height: 34px;
-            border: 1px solid #e5e7eb;
-            background: #ffffff;
-            border-radius: 8px;
-            font-size: 21px;
-            color: #6b7280;
+            padding: 10px 15px;
+            border-radius: 9px;
             cursor: pointer;
-        }
-
-        .student-close-btn:hover {
-            background: #f3f4f6;
-            color: #111827;
-        }
-
-        .student-form-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 17px;
-        }
-
-        .student-field {
-            display: flex;
-            flex-direction: column;
-            gap: 7px;
-        }
-
-        .student-field.full {
-            grid-column: 1 / -1;
-        }
-
-        .student-field label {
-            color: #374151;
             font-size: 12px;
             font-weight: 700;
         }
 
-        .student-field input,
-        .student-field select {
-            width: 100%;
-            box-sizing: border-box;
-            border: 1px solid #d1d5db;
-            background: #ffffff;
-            color: #111827;
-            border-radius: 9px;
-            padding: 11px 12px;
-            font-size: 13px;
-            outline: none;
-            transition: .2s ease;
+
+        .student-management-toolbar {
+            display: flex;
+            justify-content: space-between;
+            gap: 12px;
+            margin-bottom: 16px;
         }
 
-        .student-field input:focus,
-        .student-field select:focus {
-            border-color: #9a7b18;
-            box-shadow: 0 0 0 3px rgba(212,175,55,.12);
+
+        .student-search {
+            flex: 1;
+            max-width: 450px;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            border: 1px solid #dfe3e8;
+            background: white;
+            border-radius: 9px;
+            padding: 0 12px;
         }
+
+
+        .student-search input {
+            width: 100%;
+            border: 0;
+            outline: 0;
+            padding: 11px 0;
+            font-size: 13px;
+        }
+
+
+        .student-counter-grid {
+            display: grid;
+            grid-template-columns: repeat(
+                3,
+                1fr
+            );
+            gap: 12px;
+            margin-bottom: 16px;
+        }
+
+
+        .mini-stat {
+            background: white;
+            border: 1px solid #e5e7eb;
+            border-radius: 12px;
+            padding: 15px;
+        }
+
+
+        .mini-stat span {
+            display: block;
+            color: #6b7280;
+            font-size: 11px;
+        }
+
+
+        .mini-stat strong {
+            display: block;
+            margin-top: 5px;
+            font-size: 20px;
+        }
+
+
+        .students-table,
+        .subjects-table {
+            width: 100%;
+            overflow-x: auto;
+        }
+
+
+        .students-table-header,
+        .student-table-row {
+            min-width: 850px;
+            display: grid;
+            grid-template-columns:
+                40px
+                2fr
+                1fr
+                1.2fr
+                1fr
+                90px;
+            gap: 12px;
+            align-items: center;
+        }
+
+
+        .subjects-table-header,
+        .subject-table-row {
+            min-width: 900px;
+            display: grid;
+            grid-template-columns:
+                40px
+                2fr
+                1fr
+                1fr
+                1.2fr
+                1fr
+                80px;
+            gap: 12px;
+            align-items: center;
+        }
+
+
+        .students-table-header,
+        .subjects-table-header {
+            padding: 11px 10px;
+            background: #f8fafc;
+            color: #6b7280;
+            font-size: 10px;
+            font-weight: 800;
+            text-transform: uppercase;
+            letter-spacing: .05em;
+        }
+
+
+        .student-table-row,
+        .subject-table-row {
+            padding: 13px 10px;
+            border-bottom: 1px solid #eef0f4;
+            font-size: 12px;
+        }
+
+
+        .student-name-cell {
+            display: flex;
+            align-items: center;
+            gap: 9px;
+        }
+
+
+        .student-avatar {
+            width: 34px;
+            height: 34px;
+            border-radius: 50%;
+            background: #0b1220;
+            color: #e7c85b;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 10px;
+            font-weight: 800;
+            flex-shrink: 0;
+        }
+
+
+        .student-name-cell strong {
+            display: block;
+            font-size: 12px;
+        }
+
+
+        .student-name-cell small {
+            display: block;
+            color: #9ca3af;
+            margin-top: 3px;
+            font-size: 9px;
+        }
+
+
+        .gender-badge {
+            display: inline-block;
+            padding: 4px 8px;
+            border-radius: 20px;
+            font-size: 9px;
+            font-weight: 800;
+        }
+
+
+        .gender-male {
+            background: #e8f1ff;
+            color: #2457a6;
+        }
+
+
+        .gender-female {
+            background: #fff0f5;
+            color: #a63d6b;
+        }
+
+
+        .student-delete-btn {
+            border: 1px solid #efcaca;
+            background: #fff7f7;
+            color: #b42318;
+            padding: 7px 9px;
+            border-radius: 7px;
+            cursor: pointer;
+            font-size: 10px;
+            font-weight: 700;
+        }
+
+
+        .loading-state,
+        .empty-state {
+            padding: 45px 20px;
+            text-align: center;
+            color: #6b7280;
+        }
+
+
+        .empty-state-icon {
+            font-size: 30px;
+            margin-bottom: 10px;
+        }
+
+
+        .empty-state strong {
+            display: block;
+            color: #111827;
+            margin-bottom: 6px;
+        }
+
+
+        .empty-state p {
+            margin: 0 0 15px;
+            font-size: 12px;
+        }
+
+
+        .student-form-modal {
+            position: fixed;
+            inset: 0;
+            background: rgba(
+                3,
+                8,
+                18,
+                .65
+            );
+            z-index: 100000;
+            display: none;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+        }
+
+
+        .student-form-modal.active {
+            display: flex;
+        }
+
+
+        .student-form-content {
+            width: min(
+                650px,
+                100%
+            );
+            max-height: 90vh;
+            overflow-y: auto;
+            background: white;
+            border-radius: 17px;
+            padding: 25px;
+            position: relative;
+        }
+
+
+        .student-form-close {
+            position: absolute;
+            top: 12px;
+            right: 14px;
+            width: 34px;
+            height: 34px;
+            border: 0;
+            background: #f3f4f6;
+            border-radius: 50%;
+            font-size: 21px;
+            cursor: pointer;
+        }
+
+
+        .student-form-header {
+            margin-bottom: 20px;
+            padding-right: 35px;
+        }
+
+
+        .student-form-header h3 {
+            margin: 0;
+            font-size: 22px;
+        }
+
+
+        .student-form-header p {
+            color: #6b7280;
+            font-size: 12px;
+            margin: 6px 0 0;
+        }
+
+
+        .form-grid {
+            display: grid;
+            grid-template-columns:
+                1fr
+                1fr;
+            gap: 14px;
+        }
+
+
+        .form-field {
+            display: grid;
+            gap: 6px;
+        }
+
+
+        .form-field-full {
+            grid-column: 1 / -1;
+        }
+
+
+        .form-field label {
+            font-size: 11px;
+            font-weight: 800;
+            color: #374151;
+        }
+
+
+        .form-field input,
+        .form-field select {
+            width: 100%;
+            box-sizing: border-box;
+            border: 1px solid #d9dee7;
+            border-radius: 8px;
+            padding: 11px;
+            outline: none;
+            font-size: 12px;
+            background: white;
+        }
+
+
+        .form-field input:focus,
+        .form-field select:focus {
+            border-color: #c49a22;
+            box-shadow: 0 0 0 3px rgba(
+                196,
+                154,
+                34,
+                .1
+            );
+        }
+
+
+        .form-error {
+            display: none;
+            margin-top: 14px;
+            background: #fff1f1;
+            border: 1px solid #f0c4c4;
+            color: #b42318;
+            padding: 10px;
+            border-radius: 8px;
+            font-size: 11px;
+        }
+
+
+        .form-error.active {
+            display: block;
+        }
+
 
         .student-form-actions {
             display: flex;
             justify-content: flex-end;
             gap: 10px;
-            margin-top: 22px;
-            padding-top: 18px;
-            border-top: 1px solid #edf0f4;
+            margin-top: 20px;
         }
 
-        .student-form-message {
-            border-radius: 9px;
-            padding: 11px 13px;
-            margin-top: 18px;
-            font-size: 12px;
-            line-height: 1.5;
-        }
 
-        .student-form-message.success {
-            color: #047857;
-            background: #ecfdf5;
-            border: 1px solid #a7f3d0;
-        }
-
-        .student-form-message.error {
-            color: #b91c1c;
-            background: #fef2f2;
-            border: 1px solid #fecaca;
-        }
-
-        .student-toolbar {
-            display: flex;
-            align-items: center;
-            justify-content: space-between;
-            gap: 15px;
-            margin-bottom: 18px;
-        }
-
-        .student-search-box {
-            flex: 1;
-            max-width: 520px;
-            display: flex;
-            align-items: center;
-            gap: 9px;
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 0 13px;
-        }
-
-        .student-search-box span {
-            font-size: 14px;
-        }
-
-        .student-search-box input {
-            width: 100%;
-            border: 0;
-            outline: 0;
-            background: transparent;
-            padding: 12px 0;
-            color: #111827;
-            font-size: 13px;
-        }
-
-        .student-count-box {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 10px;
-            padding: 9px 14px;
-            display: flex;
-            align-items: center;
-            gap: 10px;
-        }
-
-        .student-count-box span {
-            color: #6b7280;
-            font-size: 11px;
-        }
-
-        .student-count-box strong {
-            color: #0b1220;
-            font-size: 18px;
-        }
-
-        .student-table-card {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            overflow: hidden;
-            box-shadow: 0 8px 24px rgba(15,23,42,.04);
-        }
-
-        .student-table-header {
-            display: flex;
-            justify-content: space-between;
-            align-items: center;
-            gap: 15px;
-            padding: 17px 20px;
-            border-bottom: 1px solid #edf0f4;
-        }
-
-        .student-table-header strong {
-            display: block;
-            color: #111827;
-            font-size: 14px;
-        }
-
-        .student-table-header span {
-            display: block;
-            color: #9ca3af;
-            font-size: 11px;
-            margin-top: 3px;
-        }
-
-        .student-refresh-btn {
-            border: 1px solid #d1d5db;
-            background: #ffffff;
-            color: #374151;
-            border-radius: 8px;
-            padding: 8px 11px;
-            cursor: pointer;
-            font-size: 11px;
-            font-weight: 700;
-        }
-
-        .student-refresh-btn:hover {
-            background: #f9fafb;
-        }
-
-        .student-table-wrap {
-            width: 100%;
-            overflow-x: auto;
-        }
-
-        .student-table {
-            width: 100%;
-            min-width: 900px;
-            border-collapse: collapse;
-        }
-
-        .student-table th {
-            background: #f8fafc;
-            color: #6b7280;
-            font-size: 10px;
-            text-transform: uppercase;
-            letter-spacing: .7px;
-            text-align: left;
-            padding: 12px 14px;
-            border-bottom: 1px solid #e5e7eb;
-            white-space: nowrap;
-        }
-
-        .student-table td {
-            padding: 13px 14px;
-            border-bottom: 1px solid #f1f5f9;
-            color: #374151;
-            font-size: 12px;
-            vertical-align: middle;
-        }
-
-        .student-table tbody tr:hover {
-            background: #fafcff;
-        }
-
-        .student-table tbody tr:last-child td {
-            border-bottom: 0;
-        }
-
-        .student-serial {
-            color: #9ca3af;
-            font-weight: 700;
-        }
-
-        .student-name-cell {
-            display: flex;
-            align-items: center;
-            gap: 10px;
-            min-width: 190px;
-        }
-
-        .student-avatar {
-            width: 38px;
-            height: 38px;
-            flex-shrink: 0;
-            border-radius: 50%;
-            display: grid;
-            place-items: center;
-            font-size: 11px;
-            font-weight: 800;
-        }
-
-        .student-avatar.male {
-            background: #e8eef8;
-            color: #173a6b;
-        }
-
-        .student-avatar.female {
-            background: #f7eaf1;
-            color: #8c315d;
-        }
-
-        .student-name-cell strong {
-            display: block;
-            color: #111827;
-            font-size: 12px;
-        }
-
-        .student-name-cell small {
-            display: block;
-            color: #9ca3af;
-            font-size: 10px;
-            margin-top: 3px;
-        }
-
-        .gender-badge {
-            display: inline-block;
-            border-radius: 999px;
-            padding: 5px 8px;
-            font-size: 10px;
-            font-weight: 700;
-        }
-
-        .gender-badge.male {
-            background: #eff6ff;
-            color: #1d4ed8;
-        }
-
-        .gender-badge.female {
-            background: #fdf2f8;
-            color: #be185d;
-        }
-
-        .student-delete-btn {
-            width: 32px;
-            height: 32px;
-            border: 1px solid #fecaca;
-            background: #fffafa;
-            color: #b91c1c;
-            border-radius: 7px;
-            cursor: pointer;
-        }
-
-        .student-delete-btn:hover {
-            background: #fef2f2;
-        }
-
-        .student-empty,
-        .student-error,
-        .student-loading {
-            background: #ffffff;
-            border: 1px solid #e5e7eb;
-            border-radius: 16px;
-            padding: 55px 25px;
+        .coming-soon {
             text-align: center;
-            color: #6b7280;
+            padding: 55px 20px;
         }
 
-        .student-empty-icon {
-            width: 60px;
-            height: 60px;
-            margin: 0 auto 16px;
+
+        .coming-soon-icon {
+            width: 55px;
+            height: 55px;
+            margin: 0 auto 14px;
             border-radius: 50%;
-            display: grid;
-            place-items: center;
-            background: #f3f6fa;
-            color: #0b1220;
-            font-size: 22px;
-            font-weight: 800;
+            background: #fff8df;
+            color: #b08b16;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 24px;
         }
 
-        .student-empty h3,
-        .student-error h3 {
-            margin: 0 0 8px;
-            color: #111827;
-            font-size: 18px;
+
+        .coming-soon h3 {
+            margin: 0 0 7px;
         }
 
-        .student-empty p,
-        .student-error p {
+
+        .coming-soon p {
             max-width: 500px;
-            margin: 0 auto 20px;
+            margin: auto;
+            color: #6b7280;
+            font-size: 12px;
             line-height: 1.6;
-            font-size: 13px;
-        }
-
-        .student-loading {
-            padding: 35px;
-            font-size: 13px;
         }
 
 
-        /* =====================================================
-           RESPONSIVE
-           ===================================================== */
+        @media (max-width: 950px) {
 
-        @media (max-width: 1050px) {
-
-            .profile-details-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+            .dashboard-sidebar {
+                width: 220px;
             }
 
-            .dashboard-stats {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
+
+            .dashboard-stat-grid {
+                grid-template-columns:
+                    1fr 1fr;
             }
 
-            .quick-action-grid {
-                grid-template-columns: repeat(2, minmax(0, 1fr));
-            }
 
+            .dashboard-two-column {
+                grid-template-columns:
+                    1fr;
+            }
         }
 
 
-        @media (max-width: 800px) {
+        @media (max-width: 720px) {
 
-            .dashboard-topbar {
-                height: auto;
-                padding: 16px 20px;
-                align-items: flex-start;
-            }
-
-            .dashboard-user-info {
-                display: none;
-            }
-
-            .dashboard-layout {
+            .dashboard-shell {
                 display: block;
             }
 
+
             .dashboard-sidebar {
-                width: 100%;
-                border-right: 0;
-                border-bottom: 1px solid #e5e7eb;
-                padding: 14px;
+                position: relative;
+                width: auto;
+                height: auto;
             }
 
-            .sidebar-profile {
+
+            .dashboard-nav {
+                grid-template-columns:
+                    repeat(
+                        2,
+                        1fr
+                    );
+            }
+
+
+            .dashboard-logout {
+                margin-top: 15px;
+            }
+
+
+            .dashboard-topbar {
+                padding: 16px;
+            }
+
+
+            .dashboard-content {
+                padding: 16px;
+            }
+
+
+            .teacher-profile-mini {
                 display: none;
             }
 
-            .dashboard-nav {
-                display: flex;
-                overflow-x: auto;
-                padding-bottom: 2px;
-            }
 
-            .dashboard-nav-item {
-                width: auto;
-                flex-shrink: 0;
-                white-space: nowrap;
-            }
-
-            .dashboard-main {
-                padding: 22px 16px;
-            }
-
-            .dashboard-welcome h1 {
-                font-size: 27px;
-            }
-
-            .student-page-header {
-                align-items: flex-start;
-            }
-
-            .student-form-grid {
-                grid-template-columns: 1fr;
-            }
-
-            .student-field.full {
-                grid-column: auto;
-            }
-
-            .student-toolbar {
-                align-items: stretch;
+            .dashboard-section-heading {
                 flex-direction: column;
             }
 
-            .student-search-box {
-                max-width: none;
-            }
 
+            .dashboard-stat-grid {
+                grid-template-columns:
+                    1fr 1fr;
+            }
         }
 
 
-        @media (max-width: 560px) {
+        @media (max-width: 520px) {
 
-            .dashboard-topbar {
-                padding: 14px 15px;
+            .dashboard-stat-grid {
+                grid-template-columns:
+                    1fr;
             }
 
-            .dashboard-brand-icon {
-                width: 38px;
-                height: 38px;
+
+            .student-counter-grid {
+                grid-template-columns:
+                    1fr;
             }
 
-            .dashboard-brand strong {
-                font-size: 16px;
+
+            .student-management-toolbar {
+                flex-direction: column;
             }
 
-            .dashboard-main {
-                padding: 20px 13px;
+
+            .student-search {
+                max-width: none;
             }
 
-            .profile-details-grid,
-            .dashboard-stats,
-            .quick-action-grid {
-                grid-template-columns: 1fr;
+
+            .form-grid {
+                grid-template-columns:
+                    1fr;
             }
 
-            .teacher-profile-card {
-                padding: 18px;
+
+            .form-field-full {
+                grid-column: auto;
             }
 
-            .profile-card-header {
-                display: block;
-            }
 
-            .profile-status {
-                display: inline-block;
-                margin-top: 12px;
-            }
-
-            .student-page-header {
-                display: block;
-            }
-
-            .student-page-header h1 {
-                font-size: 27px;
-            }
-
-            .student-page-header .student-primary-btn {
-                width: 100%;
-                margin-top: 16px;
-            }
-
-            .student-form-card {
-                padding: 17px;
-            }
-
-            .student-form-actions {
-                flex-direction: column-reverse;
-            }
-
-            .student-form-actions button {
-                width: 100%;
-            }
-
-            .student-count-box {
-                justify-content: space-between;
+            .student-form-content {
+                padding: 20px;
             }
 
         }
 
     `;
+
 
     document.head.appendChild(
         style
