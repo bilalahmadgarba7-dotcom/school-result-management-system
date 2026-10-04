@@ -217,7 +217,7 @@ async function login(event) {
         currentUser =
             data.user;
             await loadTeacherProfile();
-            
+            showTeacherDashboard();
             
 
 
