@@ -216,6 +216,9 @@ async function login(event) {
 
         currentUser =
             data.user;
+            await loadTeacherProfile();
+            
+            
 
 
         console.log(
