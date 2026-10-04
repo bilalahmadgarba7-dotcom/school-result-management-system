@@ -738,4 +738,767 @@ function addDashboardStyles() {
     document.head.appendChild(style);
 
 }
+// ==========================================
+// STUDENTS MANAGEMENT
+// ==========================================
+
+async function showStudents() {
+
+    if (!currentUser) {
+        alert("Please login first.");
+        return;
+    }
+
+    const dashboard =
+        document.getElementById("teacherDashboard");
+
+    if (!dashboard) {
+        return;
+    }
+
+    const existing =
+        document.getElementById("studentsSection");
+
+    if (existing) {
+        existing.remove();
+    }
+
+    const section =
+        document.createElement("section");
+
+    section.id = "studentsSection";
+
+    section.className = "students-section";
+
+    section.innerHTML = `
+
+        <div class="students-header">
+
+            <div>
+                <span class="hero-badge">
+                    STUDENT MANAGEMENT
+                </span>
+
+                <h2>Students</h2>
+
+                <p>
+                    Add and manage students in your class.
+                </p>
+            </div>
+
+            <button
+                type="button"
+                class="primary-btn"
+                onclick="openStudentForm()"
+            >
+                + Add Student
+            </button>
+
+        </div>
+
+
+        <div
+            id="studentFormContainer"
+            class="student-form-container"
+            style="display:none;"
+        >
+
+            <form
+                id="studentForm"
+                onsubmit="saveStudent(event)"
+            >
+
+                <div class="form-grid">
+
+                    <div>
+                        <label for="studentName">
+                            Full Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="studentName"
+                            placeholder="Enter student's full name"
+                            required
+                        >
+                    </div>
+
+
+                    <div>
+                        <label for="studentGender">
+                            Gender
+                        </label>
+
+                        <select
+                            id="studentGender"
+                            required
+                        >
+                            <option value="">
+                                Select gender
+                            </option>
+
+                            <option value="Male">
+                                Male
+                            </option>
+
+                            <option value="Female">
+                                Female
+                            </option>
+                        </select>
+                    </div>
+
+
+                    <div>
+                        <label for="studentDob">
+                            Date of Birth
+                        </label>
+
+                        <input
+                            type="date"
+                            id="studentDob"
+                        >
+                    </div>
+
+
+                    <div>
+                        <label for="studentAdmission">
+                            Admission Number
+                        </label>
+
+                        <input
+                            type="text"
+                            id="studentAdmission"
+                            placeholder="e.g. CM/001"
+                        >
+                    </div>
+
+
+                    <div>
+                        <label for="studentClass">
+                            Class
+                        </label>
+
+                        <input
+                            type="text"
+                            id="studentClass"
+                            required
+                        >
+                    </div>
+
+
+                    <div>
+                        <label for="studentSession">
+                            Academic Session
+                        </label>
+
+                        <input
+                            type="text"
+                            id="studentSession"
+                            placeholder="e.g. 2026/2027"
+                            required
+                        >
+                    </div>
+
+
+                    <div>
+                        <label for="studentTerm">
+                            Term
+                        </label>
+
+                        <select
+                            id="studentTerm"
+                            required
+                        >
+                            <option value="">
+                                Select term
+                            </option>
+
+                            <option value="First Term">
+                                First Term
+                            </option>
+
+                            <option value="Second Term">
+                                Second Term
+                            </option>
+
+                            <option value="Third Term">
+                                Third Term
+                            </option>
+                        </select>
+                    </div>
+
+                </div>
+
+
+                <div
+                    id="studentFormError"
+                    class="form-error"
+                ></div>
+
+
+                <div class="form-actions">
+
+                    <button
+                        type="button"
+                        class="secondary-btn"
+                        onclick="closeStudentForm()"
+                    >
+                        Cancel
+                    </button>
+
+                    <button
+                        type="submit"
+                        class="primary-btn"
+                    >
+                        Save Student
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+
+        <div
+            id="studentsList"
+            class="students-list"
+        >
+
+            <div class="students-loading">
+                Loading students...
+            </div>
+
+        </div>
+
+    `;
+
+    dashboard.appendChild(section);
+
+    await loadStudents();
+
+    addStudentsStyles();
+}
+
+
+// ==========================================
+// OPEN STUDENT FORM
+// ==========================================
+
+function openStudentForm() {
+
+    const formContainer =
+        document.getElementById(
+            "studentFormContainer"
+        );
+
+    if (!formContainer) {
+        return;
+    }
+
+    document
+        .getElementById("studentForm")
+        .reset();
+
+    document
+        .getElementById("studentClass")
+        .value =
+            teacherProfile?.class_name || "";
+
+    document
+        .getElementById("studentSession")
+        .value =
+            teacherProfile?.session || "";
+
+    document
+        .getElementById("studentTerm")
+        .value =
+            teacherProfile?.term || "";
+
+    document
+        .getElementById("studentFormError")
+        .textContent = "";
+
+    formContainer.style.display =
+        "block";
+
+}
+
+
+// ==========================================
+// CLOSE STUDENT FORM
+// ==========================================
+
+function closeStudentForm() {
+
+    const formContainer =
+        document.getElementById(
+            "studentFormContainer"
+        );
+
+    if (formContainer) {
+
+        formContainer.style.display =
+            "none";
+
+    }
+
+}
+
+
+// ==========================================
+// SAVE STUDENT
+// ==========================================
+
+async function saveStudent(event) {
+
+    event.preventDefault();
+
+    if (!currentUser) {
+
+        showStudentFormError(
+            "You must be logged in."
+        );
+
+        return;
+    }
+
+
+    const fullName =
+        document
+            .getElementById("studentName")
+            .value
+            .trim();
+
+    const gender =
+        document
+            .getElementById("studentGender")
+            .value;
+
+    const dateOfBirth =
+        document
+            .getElementById("studentDob")
+            .value || null;
+
+    const admissionNumber =
+        document
+            .getElementById("studentAdmission")
+            .value
+            .trim() || null;
+
+    const className =
+        document
+            .getElementById("studentClass")
+            .value
+            .trim();
+
+    const session =
+        document
+            .getElementById("studentSession")
+            .value
+            .trim();
+
+    const term =
+        document
+            .getElementById("studentTerm")
+            .value;
+
+
+    if (!fullName) {
+
+        showStudentFormError(
+            "Please enter the student's name."
+        );
+
+        return;
+    }
+
+
+    if (!gender) {
+
+        showStudentFormError(
+            "Please select the student's gender."
+        );
+
+        return;
+    }
+
+
+    if (!className) {
+
+        showStudentFormError(
+            "Please enter the class."
+        );
+
+        return;
+    }
+
+
+    if (!session) {
+
+        showStudentFormError(
+            "Please enter the academic session."
+        );
+
+        return;
+    }
+
+
+    if (!term) {
+
+        showStudentFormError(
+            "Please select the term."
+        );
+
+        return;
+    }
+
+
+    const submitButton =
+        document.querySelector(
+            "#studentForm button[type='submit']"
+        );
+
+
+    if (submitButton) {
+
+        submitButton.disabled = true;
+
+        submitButton.textContent =
+            "Saving...";
+
+    }
+
+
+    try {
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .from("students")
+                .insert([
+                    {
+                        teacher_id:
+                            currentUser.id,
+
+                        full_name:
+                            fullName,
+
+                        gender:
+                            gender,
+
+                        date_of_birth:
+                            dateOfBirth,
+
+                        admission_number:
+                            admissionNumber,
+
+                        class_name:
+                            className,
+
+                        session:
+                            session,
+
+                        term:
+                            term
+                    }
+                ]);
+
+
+        if (error) {
+
+            console.error(
+                "Student insert error:",
+                error
+            );
+
+            showStudentFormError(
+                "Unable to save student. Please try again."
+            );
+
+            return;
+        }
+
+
+        closeStudentForm();
+
+        await loadStudents();
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected student save error:",
+            error
+        );
+
+        showStudentFormError(
+            "Something went wrong. Please try again."
+        );
+
+    } finally {
+
+        if (submitButton) {
+
+            submitButton.disabled = false;
+
+            submitButton.textContent =
+                "Save Student";
+
+        }
+
+    }
+
+}
+
+
+// ==========================================
+// LOAD STUDENTS
+// ==========================================
+
+async function loadStudents() {
+
+    const list =
+        document.getElementById(
+            "studentsList"
+        );
+
+    if (!list || !currentUser) {
+        return;
+    }
+
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .from("students")
+                .select(`
+                    id,
+                    full_name,
+                    gender,
+                    date_of_birth,
+                    admission_number,
+                    class_name,
+                    session,
+                    term,
+                    created_at
+                `)
+                .eq(
+                    "teacher_id",
+                    currentUser.id
+                )
+                .order(
+                    "full_name",
+                    {
+                        ascending: true
+                    }
+                );
+
+
+        if (error) {
+
+            console.error(
+                "Student loading error:",
+                error
+            );
+
+            list.innerHTML = `
+                <p class="form-error">
+                    Unable to load students.
+                </p>
+            `;
+
+            return;
+        }
+
+
+        renderStudents(
+            data || []
+        );
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected student loading error:",
+            error
+        );
+
+    }
+
+}
+
+
+// ==========================================
+// RENDER STUDENTS
+// ==========================================
+
+function renderStudents(students) {
+
+    const list =
+        document.getElementById(
+            "studentsList"
+        );
+
+    if (!list) {
+        return;
+    }
+
+
+    if (!students.length) {
+
+        list.innerHTML = `
+
+            <div class="empty-students">
+
+                <div class="empty-icon">
+                    👨‍🎓
+                </div>
+
+                <h3>
+                    No students yet
+                </h3>
+
+                <p>
+                    Add your first student to begin
+                    managing your class.
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+    }
+
+
+    list.innerHTML = `
+
+        <div class="students-table-wrapper">
+
+            <table class="students-table">
+
+                <thead>
+
+                    <tr>
+                        <th>#</th>
+                        <th>Student</th>
+                        <th>Gender</th>
+                        <th>Admission No.</th>
+                        <th>Class</th>
+                        <th>Session</th>
+                        <th>Term</th>
+                    </tr>
+
+                </thead>
+
+                <tbody>
+
+                    ${students
+                        .map(
+                            (student, index) => `
+
+                            <tr>
+
+                                <td>
+                                    ${index + 1}
+                                </td>
+
+                                <td>
+                                    <strong>
+                                        ${escapeHTML(
+                                            student.full_name
+                                        )}
+                                    </strong>
+                                </td>
+
+                                <td>
+                                    ${escapeHTML(
+                                        student.gender
+                                    )}
+                                </td>
+
+                                <td>
+                                    ${
+                                        student.admission_number
+                                            ? escapeHTML(
+                                                student.admission_number
+                                            )
+                                            : "—"
+                                    }
+                                </td>
+
+                                <td>
+                                    ${escapeHTML(
+                                        student.class_name
+                                    )}
+                                </td>
+
+                                <td>
+                                    ${escapeHTML(
+                                        student.session
+                                    )}
+                                </td>
+
+                                <td>
+                                    ${escapeHTML(
+                                        student.term
+                                    )}
+                                </td>
+
+                            </tr>
+
+                        `
+                        )
+                        .join("")}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    `;
+
+}
+
+
+// ==========================================
+// STUDENT FORM ERROR
+// ==========================================
+
+function showStudentFormError(message) {
+
+    const error =
+        document.getElementById(
+            "studentFormError"
+        );
+
+    if (error) {
+
+        error.textContent =
+            message;
+
+    }
+
+}
+
+
+// ==========================================
+// HTML SAFETY
+// ==========================================
+
+function escapeHTML(value) {
+
+    return String(value ?? "")
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
+
+}
     
