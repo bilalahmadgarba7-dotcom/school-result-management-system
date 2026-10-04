@@ -1,11 +1,7 @@
 console.log("ClassMark script loaded");
-// ============================================================
-// CLASSMARK
-// Teacher Result Management System
-// ============================================================
-// ============================================================
-// SUPABASE CONNECTION
-// ============================================================
+/* =========================================================
+   CLASSMARK — SUPABASE CONFIGURATION
+   ========================================================= */
 const SUPABASE_URL =
     "https://wzqcjbuotsipshjgrboo.supabase.co";
 const SUPABASE_PUBLIC_KEY =
@@ -15,310 +11,203 @@ const supabaseClient =
         SUPABASE_URL,
         SUPABASE_PUBLIC_KEY
     );
-// ============================================================
-// APPLICATION STATE
-// ============================================================
+/* =========================================================
+   GLOBAL STATE
+   ========================================================= */
 let currentUser = null;
-// ============================================================
-// DOM READY
-// ============================================================
-document.addEventListener(
-    "DOMContentLoaded",
-    async function () {
-        console.log(
-            "ClassMark application initialized."
-        );
-        setupModalEvents();
-        await checkAuthSession();
-    }
-);
-// ============================================================
-// SHOW LOGIN MODAL
-// ============================================================
+let teacherProfile = null;
+/* =========================================================
+   INITIALIZATION
+   ========================================================= */
+document.addEventListener("DOMContentLoaded", () => {
+    initializeClassMark();
+});
+async function initializeClassMark() {
+    setupModalEvents();
+    await checkAuthSession();
+}
+/* =========================================================
+   LOGIN MODAL
+   ========================================================= */
 function showLogin() {
-    const modal =
-        document.getElementById("loginModal");
+    const modal = document.getElementById("loginModal");
     if (!modal) {
-        console.error(
-            "Login modal not found."
-        );
+        console.error("Login modal not found.");
         return;
     }
     modal.classList.add("active");
-    modal.setAttribute(
-        "aria-hidden",
-        "false"
-    );
-    const emailInput =
-        document.getElementById("username");
-    if (emailInput) {
-        setTimeout(
-            function () {
-                emailInput.focus();
-            },
-            100
-        );
-    }
+    modal.setAttribute("aria-hidden", "false");
+    setTimeout(() => {
+        const usernameInput = document.getElementById("username");
+        if (usernameInput) {
+            usernameInput.focus();
+        }
+    }, 100);
 }
-// ============================================================
-// CLOSE LOGIN MODAL
-// ============================================================
 function closeLogin() {
-    const modal =
-        document.getElementById("loginModal");
-    if (!modal) {
-        return;
-    }
+    const modal = document.getElementById("loginModal");
+    if (!modal) return;
     modal.classList.remove("active");
-    modal.setAttribute(
-        "aria-hidden",
-        "true"
-    );
+    modal.setAttribute("aria-hidden", "true");
 }
-// ============================================================
-// MODAL EVENTS
-// ============================================================
 function setupModalEvents() {
-    document.addEventListener(
-        "click",
-        function (event) {
-            const modal =
-                document.getElementById(
-                    "loginModal"
-                );
-            if (
-                modal &&
-                event.target === modal
-            ) {
-                closeLogin();
-            }
+    const modal = document.getElementById("loginModal");
+    if (!modal) return;
+    modal.addEventListener("click", (event) => {
+        if (event.target === modal) {
+            closeLogin();
         }
-    );
-    document.addEventListener(
-        "keydown",
-        function (event) {
-            if (
-                event.key === "Escape"
-            ) {
-                const modal =
-                    document.getElementById(
-                        "loginModal"
-                    );
-                if (
-                    modal &&
-                    modal.classList.contains(
-                        "active"
-                    )
-                ) {
-                    closeLogin();
-                }
-            }
+    });
+    document.addEventListener("keydown", (event) => {
+        if (event.key === "Escape") {
+            closeLogin();
         }
-    );
-}
-// ============================================================
-// LEARN MORE
-// ============================================================
-function learnMore() {
-    const featuresSection =
-        document.getElementById(
-            "features"
-        );
-    if (!featuresSection) {
-        return;
-    }
-    featuresSection.scrollIntoView({
-        behavior: "smooth",
-        block: "start"
     });
 }
-// ============================================================
-// CHECK AUTH SESSION
-// ============================================================
+/* =========================================================
+   LEARN MORE
+   ========================================================= */
+function learnMore() {
+    const featuresSection =
+        document.getElementById("features");
+    if (featuresSection) {
+        featuresSection.scrollIntoView({
+            behavior: "smooth"
+        });
+    }
+}
+/* =========================================================
+   AUTH SESSION
+   ========================================================= */
 async function checkAuthSession() {
     try {
         const {
             data,
             error
-        } =
-            await supabaseClient.auth
-                .getSession();
+        } = await supabaseClient.auth.getSession();
         if (error) {
             console.error(
                 "Session error:",
-                error
+                error.message
             );
             return;
         }
-        if (
-            data &&
-            data.session &&
-            data.session.user
-        ) {
-            currentUser =
-                data.session.user;
-            console.log(
-                "Existing session found:",
-                currentUser.email
-            );
+        if (data && data.session) {
+            currentUser = data.session.user;
+            await loadTeacherProfile(currentUser);
+            showTeacherDashboard(currentUser);
         }
     } catch (error) {
         console.error(
-            "Unable to check session:",
+            "Authentication check failed:",
             error
         );
     }
 }
-// ============================================================
-// AUTH STATE LISTENER
-// ============================================================
+/* =========================================================
+   AUTH STATE LISTENER
+   ========================================================= */
 supabaseClient.auth.onAuthStateChange(
-    function (
-        event,
-        session
-    ) {
+    async (event, session) => {
         console.log(
-            "Auth state changed:",
+            "Auth event:",
             event
         );
-        if (
-            session &&
-            session.user
-        ) {
-            currentUser =
-                session.user;
+        if (session && session.user) {
+            currentUser = session.user;
+            await loadTeacherProfile(currentUser);
+            showTeacherDashboard(currentUser);
         } else {
             currentUser = null;
+            teacherProfile = null;
+            showLandingPage();
         }
     }
 );
-// ============================================================
-// TEACHER LOGIN
-// ============================================================
+/* =========================================================
+   TEACHER LOGIN
+   ========================================================= */
 async function login(event) {
     event.preventDefault();
     const emailInput =
-        document.getElementById(
-            "username"
-        );
+        document.getElementById("username");
     const passwordInput =
-        document.getElementById(
-            "password"
+        document.getElementById("password");
+    const submitButton =
+        document.querySelector(
+            "#loginForm button[type='submit']"
         );
-    if (
-        !emailInput ||
-        !passwordInput
-    ) {
+    if (!emailInput || !passwordInput) {
         alert(
             "Login form could not be loaded."
         );
         return;
     }
     const email =
-        emailInput.value
-            .trim();
+        emailInput.value.trim();
     const password =
-        passwordInput.value
-            .trim();
-    // --------------------------------------------------------
-    // VALIDATION
-    // --------------------------------------------------------
+        passwordInput.value;
     if (!email || !password) {
         alert(
             "Please enter your email and password."
         );
         return;
     }
-    const submitButton =
-        document.querySelector(
-            "#loginForm button[type='submit']"
-        );
     if (submitButton) {
-        submitButton.disabled =
-            true;
+        submitButton.disabled = true;
         submitButton.textContent =
             "Signing In...";
     }
     try {
-        // ----------------------------------------------------
-        // SUPABASE AUTHENTICATION
-        // ----------------------------------------------------
         const {
             data,
             error
-        } =
-            await supabaseClient.auth
-                .signInWithPassword({
-                    email: email,
-                    password: password
-                });
-        // ----------------------------------------------------
-        // AUTH ERROR
-        // ----------------------------------------------------
+        } = await supabaseClient.auth.signInWithPassword({
+            email: email,
+            password: password
+        });
         if (error) {
-            console.error(
-                "Authentication error:",
-                error
-            );
-            alert(
-                getLoginErrorMessage(
-                    error
-                )
-            );
-            return;
+            throw error;
         }
-        // ----------------------------------------------------
-        // SUCCESS
-        // ----------------------------------------------------
-        currentUser =
-            data.user;
-        console.log(
-            "Logged in user:",
-            currentUser
-        );
+        if (!data || !data.user) {
+            throw new Error(
+                "Login was not completed."
+            );
+        }
+        currentUser = data.user;
+        await loadTeacherProfile(currentUser);
         closeLogin();
-        showTeacherDashboard(
-            currentUser
-        );
+        showTeacherDashboard(currentUser);
     } catch (error) {
         console.error(
-            "Unexpected login error:",
+            "Login error:",
             error
         );
         alert(
-            "Something went wrong while logging in. Please try again."
+            getLoginErrorMessage(error)
         );
     } finally {
         if (submitButton) {
-            submitButton.disabled =
-                false;
+            submitButton.disabled = false;
             submitButton.textContent =
                 "Sign In to ClassMark";
         }
     }
 }
-// ============================================================
-// LOGIN ERROR MESSAGES
-// ============================================================
-function getLoginErrorMessage(
-    error
-) {
-    if (!error) {
-        return (
-            "Unable to sign in."
-        );
-    }
+/* =========================================================
+   LOGIN ERROR MESSAGES
+   ========================================================= */
+function getLoginErrorMessage(error) {
     const message =
-        String(
-            error.message || ""
-        ).toLowerCase();
+        error?.message?.toLowerCase() || "";
     if (
         message.includes(
             "invalid login credentials"
         )
     ) {
         return (
-            "Invalid email or password."
+            "Invalid email or password. " +
+            "Please check your details and try again."
         );
     }
     if (
@@ -336,104 +225,140 @@ function getLoginErrorMessage(
         )
     ) {
         return (
-            "Too many login attempts. Please wait a moment and try again."
+            "Too many login attempts. " +
+            "Please wait a moment and try again."
         );
     }
     return (
-        error.message ||
+        error?.message ||
         "Unable to sign in. Please try again."
     );
 }
-// ============================================================
-// LOGOUT
-// ============================================================
+/* =========================================================
+   LOAD TEACHER PROFILE
+   ========================================================= */
+async function loadTeacherProfile(user) {
+    if (!user || !user.id) {
+        console.error(
+            "No authenticated user available."
+        );
+        return null;
+    }
+    try {
+        const {
+            data,
+            error
+        } = await supabaseClient
+            .from("Teacher")
+            .select(
+                "id, full_name, phone, username, email, school_name, class_name, session, term"
+            )
+            .eq("id", user.id)
+            .single();
+        if (error) {
+            console.error(
+                "Teacher profile error:",
+                error
+            );
+            teacherProfile = null;
+            return null;
+        }
+        teacherProfile = data;
+        console.log(
+            "Teacher profile loaded:",
+            teacherProfile
+        );
+        return teacherProfile;
+    } catch (error) {
+        console.error(
+            "Unable to load teacher profile:",
+            error
+        );
+        teacherProfile = null;
+        return null;
+    }
+}
+/* =========================================================
+   LOGOUT
+   ========================================================= */
 async function logout() {
     try {
         const {
             error
-        } =
-            await supabaseClient.auth
-                .signOut();
+        } = await supabaseClient.auth.signOut();
         if (error) {
-            console.error(
-                "Logout error:",
-                error
-            );
-            alert(
-                "Unable to log out. Please try again."
-            );
-            return;
+            throw error;
         }
         currentUser = null;
+        teacherProfile = null;
         showLandingPage();
     } catch (error) {
         console.error(
-            "Unexpected logout error:",
+            "Logout error:",
             error
         );
         alert(
-            "Something went wrong while logging out."
+            "Unable to sign out. Please try again."
         );
     }
 }
-// ============================================================
-// SHOW TEACHER DASHBOARD
-// ============================================================
-function showTeacherDashboard(
-    user
-) {
-    const existingDashboard =
+/* =========================================================
+   TEACHER DASHBOARD
+   ========================================================= */
+function showTeacherDashboard(user) {
+    hideLandingPage();
+    let dashboard =
         document.getElementById(
             "teacherDashboard"
         );
-    if (existingDashboard) {
-        existingDashboard.style.display =
-            "block";
-        document.body.classList.add(
-            "dashboard-active"
+    if (!dashboard) {
+        dashboard =
+            document.createElement("div");
+        dashboard.id =
+            "teacherDashboard";
+        document.body.appendChild(
+            dashboard
         );
-        return;
     }
-    const dashboard =
-        document.createElement(
-            "div"
-        );
-    dashboard.id =
-        "teacherDashboard";
-    dashboard.className =
-        "teacher-dashboard";
+    const profile =
+        teacherProfile || {};
+    const displayName =
+        profile.full_name ||
+        getUserDisplayName(user);
+    const schoolName =
+        profile.school_name ||
+        "School not configured";
+    const className =
+        profile.class_name ||
+        "Class not configured";
+    const session =
+        profile.session ||
+        "Session not configured";
+    const term =
+        profile.term ||
+        "Term not configured";
     dashboard.innerHTML = `
         <div class="dashboard-shell">
-            <!-- ==========================================
-                 DASHBOARD HEADER
-            =========================================== -->
-            <header class="dashboard-header">
+            <header class="dashboard-topbar">
                 <div class="dashboard-brand">
-                    <div class="dashboard-logo">
+                    <div class="dashboard-brand-icon">
                         CM
                     </div>
                     <div>
-                        <strong>
-                            ClassMark
-                        </strong>
-                        <span>
-                            Teacher Dashboard
-                        </span>
+                        <strong>ClassMark</strong>
+                        <span>Teacher Dashboard</span>
                     </div>
                 </div>
                 <div class="dashboard-user">
                     <div class="dashboard-user-info">
                         <strong>
-                            ${escapeHTML(
-                                getUserDisplayName(
-                                    user
-                                )
-                            )}
+                            ${escapeHTML(displayName)}
                         </strong>
                         <span>
                             ${escapeHTML(
-                                user.email ||
-                                "Teacher Account"
+                                profile.email ||
+                                user?.email ||
+                                ""
                             )}
                         </span>
                     </div>
@@ -446,187 +371,208 @@ function showTeacherDashboard(
                     </button>
                 </div>
             </header>
-            <!-- ==========================================
-                 DASHBOARD BODY
-            =========================================== -->
-            <div class="dashboard-body">
-                <!-- ======================================
-                     SIDEBAR
-                ======================================= -->
+            <div class="dashboard-layout">
                 <aside class="dashboard-sidebar">
-                    <nav
-                        class="dashboard-menu"
-                        aria-label="Teacher dashboard navigation"
-                    >
+                    <div class="sidebar-profile">
+                        <div class="profile-avatar">
+                            ${escapeHTML(
+                                getInitials(displayName)
+                            )}
+                        </div>
+                        <strong>
+                            ${escapeHTML(displayName)}
+                        </strong>
+                        <span>
+                            ${escapeHTML(className)}
+                        </span>
+                    </div>
+                    <nav class="dashboard-nav">
                         <button
                             type="button"
-                            class="dashboard-menu-item active"
-                            onclick="openDashboardSection('overview', this)"
+                            class="dashboard-nav-item active"
+                            onclick="showDashboardSection('overview', this)"
                         >
-                            <span>📊</span>
-                            <span>Dashboard</span>
+                            <span>⌂</span>
+                            Overview
                         </button>
                         <button
                             type="button"
-                            class="dashboard-menu-item"
-                            onclick="openDashboardSection('students', this)"
+                            class="dashboard-nav-item"
+                            onclick="showDashboardSection('students', this)"
                         >
                             <span>👨‍🎓</span>
-                            <span>Students</span>
+                            Students
                         </button>
                         <button
                             type="button"
-                            class="dashboard-menu-item"
-                            onclick="openDashboardSection('subjects', this)"
+                            class="dashboard-nav-item"
+                            onclick="showDashboardSection('subjects', this)"
                         >
                             <span>📚</span>
-                            <span>Subjects</span>
+                            Subjects
                         </button>
                         <button
                             type="button"
-                            class="dashboard-menu-item"
-                            onclick="openDashboardSection('marks', this)"
+                            class="dashboard-nav-item"
+                            onclick="showDashboardSection('marks', this)"
                         >
                             <span>📝</span>
-                            <span>Enter Marks</span>
+                            Enter Marks
                         </button>
                         <button
                             type="button"
-                            class="dashboard-menu-item"
-                            onclick="openDashboardSection('ocr', this)"
+                            class="dashboard-nav-item"
+                            onclick="showDashboardSection('ocr', this)"
                         >
                             <span>📷</span>
-                            <span>Score Sheet</span>
+                            Score Sheet OCR
                         </button>
                         <button
                             type="button"
-                            class="dashboard-menu-item"
-                            onclick="openDashboardSection('attendance', this)"
+                            class="dashboard-nav-item"
+                            onclick="showDashboardSection('attendance', this)"
                         >
                             <span>📅</span>
-                            <span>Attendance</span>
+                            Attendance
                         </button>
                         <button
                             type="button"
-                            class="dashboard-menu-item"
-                            onclick="openDashboardSection('results', this)"
+                            class="dashboard-nav-item"
+                            onclick="showDashboardSection('results', this)"
                         >
-                            <span>📈</span>
-                            <span>Generate Results</span>
+                            <span>📊</span>
+                            Generate Results
                         </button>
                         <button
                             type="button"
-                            class="dashboard-menu-item"
-                            onclick="openDashboardSection('reports', this)"
+                            class="dashboard-nav-item"
+                            onclick="showDashboardSection('reports', this)"
                         >
                             <span>📄</span>
-                            <span>Reports</span>
+                            Reports
                         </button>
                         <button
                             type="button"
-                            class="dashboard-menu-item"
-                            onclick="openDashboardSection('settings', this)"
+                            class="dashboard-nav-item"
+                            onclick="showDashboardSection('settings', this)"
                         >
                             <span>⚙️</span>
-                            <span>Settings</span>
+                            Settings
                         </button>
                     </nav>
                 </aside>
-                <!-- ======================================
-                     MAIN DASHBOARD CONTENT
-                ======================================= -->
                 <main class="dashboard-main">
-                    <!-- OVERVIEW -->
                     <section
-                        id="dashboard-section-overview"
                         class="dashboard-section active"
+                        data-section="overview"
                     >
-                        <div class="dashboard-page-heading">
+                        <div class="dashboard-welcome">
                             <div>
-                                <span>
+                                <span class="dashboard-eyebrow">
                                     TEACHER WORKSPACE
                                 </span>
                                 <h1>
-                                    Welcome to ClassMark
+                                    Welcome,
+                                    ${escapeHTML(displayName)}
                                 </h1>
                                 <p>
-                                    Manage your class, marks,
-                                    attendance and academic results
+                                    Manage your classroom,
+                                    academic records and results
                                     from one place.
                                 </p>
                             </div>
                         </div>
-                        <!-- STAT CARDS -->
-                        <div class="dashboard-stat-grid">
-                            <div class="dashboard-stat-card">
-                                <div class="dashboard-stat-icon">
-                                    👨‍🎓
-                                </div>
+                        <div class="teacher-profile-card">
+                            <div class="profile-card-header">
                                 <div>
-                                    <strong>
-                                        0
-                                    </strong>
-                                    <span>
-                                        Students
+                                    <span class="dashboard-eyebrow">
+                                        TEACHER PROFILE
                                     </span>
+                                    <h2>
+                                        Class Information
+                                    </h2>
+                                </div>
+                                <div class="profile-status">
+                                    ✓ Authenticated
                                 </div>
                             </div>
-                            <div class="dashboard-stat-card">
-                                <div class="dashboard-stat-icon">
-                                    📚
-                                </div>
-                                <div>
-                                    <strong>
-                                        0
-                                    </strong>
-                                    <span>
-                                        Subjects
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="dashboard-stat-card">
-                                <div class="dashboard-stat-icon">
-                                    📝
-                                </div>
-                                <div>
-                                    <strong>
-                                        0%
-                                    </strong>
-                                    <span>
-                                        Result Completion
-                                    </span>
-                                </div>
-                            </div>
-                            <div class="dashboard-stat-card">
-                                <div class="dashboard-stat-icon">
-                                    📅
-                                </div>
-                                <div>
-                                    <strong>
-                                        0%
-                                    </strong>
-                                    <span>
-                                        Attendance
-                                    </span>
-                                </div>
+                            <div class="profile-details-grid">
+                                ${profileDetail(
+                                    "Full Name",
+                                    displayName
+                                )}
+                                ${profileDetail(
+                                    "Phone Number",
+                                    profile.phone ||
+                                    "Not provided"
+                                )}
+                                ${profileDetail(
+                                    "Username",
+                                    profile.username ||
+                                    "Not provided"
+                                )}
+                                ${profileDetail(
+                                    "Email",
+                                    profile.email ||
+                                    user?.email ||
+                                    "Not provided"
+                                )}
+                                ${profileDetail(
+                                    "School",
+                                    schoolName
+                                )}
+                                ${profileDetail(
+                                    "Class",
+                                    className
+                                )}
+                                ${profileDetail(
+                                    "Session",
+                                    session
+                                )}
+                                ${profileDetail(
+                                    "Term",
+                                    term
+                                )}
                             </div>
                         </div>
-                        <!-- QUICK ACTIONS -->
-                        <div class="dashboard-panel">
-                            <div class="dashboard-panel-header">
-                                <div>
-                                    <h2>
-                                        Quick Actions
-                                    </h2>
-                                    <p>
-                                        Start managing your classroom.
-                                    </p>
-                                </div>
+                        <div class="dashboard-stats">
+                            <div class="dashboard-stat-card">
+                                <span>Students</span>
+                                <strong>0</strong>
+                                <small>
+                                    No students added yet
+                                </small>
                             </div>
-                            <div class="dashboard-action-grid">
+                            <div class="dashboard-stat-card">
+                                <span>Subjects</span>
+                                <strong>0</strong>
+                                <small>
+                                    No subjects configured
+                                </small>
+                            </div>
+                            <div class="dashboard-stat-card">
+                                <span>Results</span>
+                                <strong>0%</strong>
+                                <small>
+                                    Result completion
+                                </small>
+                            </div>
+                            <div class="dashboard-stat-card">
+                                <span>Attendance</span>
+                                <strong>0%</strong>
+                                <small>
+                                    Attendance recorded
+                                </small>
+                            </div>
+                        </div>
+                        <div class="quick-actions">
+                            <h2>
+                                Quick Actions
+                            </h2>
+                            <div class="quick-action-grid">
                                 <button
                                     type="button"
-                                    onclick="openDashboardSectionByName('students')"
+                                    onclick="showDashboardSection('students')"
                                 >
                                     <span>👨‍🎓</span>
                                     <strong>
@@ -638,11 +584,11 @@ function showTeacherDashboard(
                                 </button>
                                 <button
                                     type="button"
-                                    onclick="openDashboardSectionByName('subjects')"
+                                    onclick="showDashboardSection('subjects')"
                                 >
                                     <span>📚</span>
                                     <strong>
-                                        Add Subjects
+                                        Manage Subjects
                                     </strong>
                                     <small>
                                         Configure class subjects
@@ -650,7 +596,7 @@ function showTeacherDashboard(
                                 </button>
                                 <button
                                     type="button"
-                                    onclick="openDashboardSectionByName('marks')"
+                                    onclick="showDashboardSection('marks')"
                                 >
                                     <span>📝</span>
                                     <strong>
@@ -662,7 +608,7 @@ function showTeacherDashboard(
                                 </button>
                                 <button
                                     type="button"
-                                    onclick="openDashboardSectionByName('attendance')"
+                                    onclick="showDashboardSection('attendance')"
                                 >
                                     <span>📅</span>
                                     <strong>
@@ -674,556 +620,215 @@ function showTeacherDashboard(
                                 </button>
                             </div>
                         </div>
-                        <!-- CLASS INFORMATION -->
-                        <div class="dashboard-panel">
-                            <div class="dashboard-panel-header">
-                                <div>
-                                    <h2>
-                                        Class Information
-                                    </h2>
-                                    <p>
-                                        Your current teaching profile.
-                                    </p>
-                                </div>
-                            </div>
-                            <div class="dashboard-info-grid">
-                                <div>
-                                    <span>
-                                        Teacher
-                                    </span>
-                                    <strong>
-                                        ${escapeHTML(
-                                            getUserDisplayName(
-                                                user
-                                            )
-                                        )}
-                                    </strong>
-                                </div>
-                                <div>
-                                    <span>
-                                        Email
-                                    </span>
-                                    <strong>
-                                        ${escapeHTML(
-                                            user.email ||
-                                            "Not available"
-                                        )}
-                                    </strong>
-                                </div>
-                                <div>
-                                    <span>
-                                        School
-                                    </span>
-                                    <strong>
-                                        Not configured
-                                    </strong>
-                                </div>
-                                <div>
-                                    <span>
-                                        Class
-                                    </span>
-                                    <strong>
-                                        Not configured
-                                    </strong>
-                                </div>
-                            </div>
-                        </div>
                     </section>
-                    <!-- STUDENTS -->
                     <section
-                        id="dashboard-section-students"
                         class="dashboard-section"
+                        data-section="students"
                     >
-                        <div class="dashboard-page-heading">
-                            <span>
-                                CLASS MANAGEMENT
-                            </span>
-                            <h1>
-                                Students
-                            </h1>
-                            <p>
-                                Add, organize and manage students
-                                in your classroom.
-                            </p>
-                        </div>
-                        <div class="dashboard-panel">
-                            <div class="empty-dashboard-state">
-                                <div>
-                                    👨‍🎓
-                                </div>
-                                <h2>
-                                    No Students Yet
-                                </h2>
-                                <p>
-                                    Student management will be connected
-                                    to your ClassMark database here.
-                                </p>
-                                <button
-                                    type="button"
-                                    class="dashboard-primary-button"
-                                    onclick="showComingSoon('Student Management')"
-                                >
-                                    Add Student
-                                </button>
-                            </div>
-                        </div>
+                        ${comingSoonSection(
+                            "Student Management",
+                            "Add, edit, organize and manage your students."
+                        )}
                     </section>
-                    <!-- SUBJECTS -->
                     <section
-                        id="dashboard-section-subjects"
                         class="dashboard-section"
+                        data-section="subjects"
                     >
-                        <div class="dashboard-page-heading">
-                            <span>
-                                ACADEMIC SETUP
-                            </span>
-                            <h1>
-                                Subjects
-                            </h1>
-                            <p>
-                                Configure the subjects taught in your class.
-                            </p>
-                        </div>
-                        <div class="dashboard-panel">
-                            <div class="empty-dashboard-state">
-                                <div>
-                                    📚
-                                </div>
-                                <h2>
-                                    No Subjects Configured
-                                </h2>
-                                <p>
-                                    Your class subjects will appear here
-                                    once they are connected to Supabase.
-                                </p>
-                                <button
-                                    type="button"
-                                    class="dashboard-primary-button"
-                                    onclick="showComingSoon('Subject Management')"
-                                >
-                                    Add Subject
-                                </button>
-                            </div>
-                        </div>
+                        ${comingSoonSection(
+                            "Subject Management",
+                            "Configure the subjects used by your class."
+                        )}
                     </section>
-                    <!-- MARKS -->
                     <section
-                        id="dashboard-section-marks"
                         class="dashboard-section"
+                        data-section="marks"
                     >
-                        <div class="dashboard-page-heading">
-                            <span>
-                                ASSESSMENTS
-                            </span>
-                            <h1>
-                                Enter Marks
-                            </h1>
-                            <p>
-                                Record CA and examination scores
-                                for your students.
-                            </p>
-                        </div>
-                        <div class="dashboard-panel">
-                            <div class="empty-dashboard-state">
-                                <div>
-                                    📝
-                                </div>
-                                <h2>
-                                    Marks Entry
-                                </h2>
-                                <p>
-                                    Marks entry will be connected to
-                                    students and subjects in the next
-                                    database stage.
-                                </p>
-                                <button
-                                    type="button"
-                                    class="dashboard-primary-button"
-                                    onclick="showComingSoon('Marks Entry')"
-                                >
-                                    Open Marks Entry
-                                </button>
-                            </div>
-                        </div>
+                        ${comingSoonSection(
+                            "Marks & Assessments",
+                            "Record CA1, CA2, CA3 and examination scores."
+                        )}
                     </section>
-                    <!-- OCR -->
                     <section
-                        id="dashboard-section-ocr"
                         class="dashboard-section"
+                        data-section="ocr"
                     >
-                        <div class="dashboard-page-heading">
-                            <span>
-                                SMART DATA ENTRY
-                            </span>
-                            <h1>
-                                Score Sheet Upload
-                            </h1>
-                            <p>
-                                Upload score sheets and review extracted
-                                marks using OCR technology.
-                            </p>
-                        </div>
-                        <div class="dashboard-panel">
-                            <div class="empty-dashboard-state">
-                                <div>
-                                    📷
-                                </div>
-                                <h2>
-                                    OCR Score Sheet
-                                </h2>
-                                <p>
-                                    OCR processing will be added after
-                                    the core student and marks database
-                                    is ready.
-                                </p>
-                                <button
-                                    type="button"
-                                    class="dashboard-primary-button"
-                                    onclick="showComingSoon('Score Sheet OCR')"
-                                >
-                                    Upload Score Sheet
-                                </button>
-                            </div>
-                        </div>
+                        ${comingSoonSection(
+                            "Score Sheet OCR",
+                            "Upload score sheets and extract marks automatically."
+                        )}
                     </section>
-                    <!-- ATTENDANCE -->
                     <section
-                        id="dashboard-section-attendance"
                         class="dashboard-section"
+                        data-section="attendance"
                     >
-                        <div class="dashboard-page-heading">
-                            <span>
-                                CLASS MONITORING
-                            </span>
-                            <h1>
-                                Attendance
-                            </h1>
-                            <p>
-                                Track present days, absent days and
-                                attendance percentages.
-                            </p>
-                        </div>
-                        <div class="dashboard-panel">
-                            <div class="empty-dashboard-state">
-                                <div>
-                                    📅
-                                </div>
-                                <h2>
-                                    Attendance Tracking
-                                </h2>
-                                <p>
-                                    Attendance records will be connected
-                                    to your students in the database stage.
-                                </p>
-                                <button
-                                    type="button"
-                                    class="dashboard-primary-button"
-                                    onclick="showComingSoon('Attendance Tracking')"
-                                >
-                                    Open Attendance
-                                </button>
-                            </div>
-                        </div>
+                        ${comingSoonSection(
+                            "Attendance",
+                            "Track present days, absent days and attendance percentage."
+                        )}
                     </section>
-                    <!-- RESULTS -->
                     <section
-                        id="dashboard-section-results"
                         class="dashboard-section"
+                        data-section="results"
                     >
-                        <div class="dashboard-page-heading">
-                            <span>
-                                ACADEMIC PERFORMANCE
-                            </span>
-                            <h1>
-                                Generate Results
-                            </h1>
-                            <p>
-                                Calculate totals, averages, grades,
-                                remarks and positions.
-                            </p>
-                        </div>
-                        <div class="dashboard-panel">
-                            <div class="empty-dashboard-state">
-                                <div>
-                                    📈
-                                </div>
-                                <h2>
-                                    Result Generation
-                                </h2>
-                                <p>
-                                    Automatic result calculations will
-                                    be enabled after marks data is connected.
-                                </p>
-                                <button
-                                    type="button"
-                                    class="dashboard-primary-button"
-                                    onclick="showComingSoon('Result Generation')"
-                                >
-                                    Generate Results
-                                </button>
-                            </div>
-                        </div>
+                        ${comingSoonSection(
+                            "Result Generation",
+                            "Calculate totals, averages, grades and positions."
+                        )}
                     </section>
-                    <!-- REPORTS -->
                     <section
-                        id="dashboard-section-reports"
                         class="dashboard-section"
+                        data-section="reports"
                     >
-                        <div class="dashboard-page-heading">
-                            <span>
-                                DOCUMENTS
-                            </span>
-                            <h1>
-                                Reports
-                            </h1>
-                            <p>
-                                Generate professional student and class reports.
-                            </p>
-                        </div>
-                        <div class="dashboard-panel">
-                            <div class="empty-dashboard-state">
-                                <div>
-                                    📄
-                                </div>
-                                <h2>
-                                    Professional Reports
-                                </h2>
-                                <p>
-                                    Student report sheets and printable
-                                    result documents will be available here.
-                                </p>
-                                <button
-                                    type="button"
-                                    class="dashboard-primary-button"
-                                    onclick="showComingSoon('Reports')"
-                                >
-                                    Generate Report
-                                </button>
-                            </div>
-                        </div>
+                        ${comingSoonSection(
+                            "Professional Reports",
+                            "Generate student and class academic reports."
+                        )}
                     </section>
-                    <!-- SETTINGS -->
                     <section
-                        id="dashboard-section-settings"
                         class="dashboard-section"
+                        data-section="settings"
                     >
-                        <div class="dashboard-page-heading">
-                            <span>
-                                ACCOUNT
-                            </span>
-                            <h1>
-                                Settings
-                            </h1>
-                            <p>
-                                Manage your teacher and class information.
-                            </p>
-                        </div>
-                        <div class="dashboard-panel">
-                            <div class="dashboard-info-grid">
-                                <div>
-                                    <span>
-                                        Account Email
-                                    </span>
-                                    <strong>
-                                        ${escapeHTML(
-                                            user.email ||
-                                            "Not available"
-                                        )}
-                                    </strong>
-                                </div>
-                                <div>
-                                    <span>
-                                        Account Status
-                                    </span>
-                                    <strong>
-                                        Authenticated
-                                    </strong>
-                                </div>
-                                <div>
-                                    <span>
-                                        School
-                                    </span>
-                                    <strong>
-                                        Not configured
-                                    </strong>
-                                </div>
-                                <div>
-                                    <span>
-                                        Class
-                                    </span>
-                                    <strong>
-                                        Not configured
-                                    </strong>
-                                </div>
-                            </div>
-                        </div>
+                        ${comingSoonSection(
+                            "Settings",
+                            "Manage your ClassMark teacher account and class configuration."
+                        )}
                     </section>
                 </main>
             </div>
         </div>
     `;
-    document.body.appendChild(
-        dashboard
-    );
-    document.body.classList.add(
-        "dashboard-active"
-    );
-    hideLandingPage();
     addDashboardStyles();
 }
-// ============================================================
-// HIDE LANDING PAGE
-// ============================================================
-function hideLandingPage() {
-    const header =
-        document.querySelector(
-            ".header"
-        );
-    const main =
-        document.querySelector(
-            "body > main"
-        );
-    const modal =
-        document.getElementById(
-            "loginModal"
-        );
-    const footer =
-        document.querySelector(
-            "body > footer"
-        );
-    if (header) {
-        header.style.display =
-            "none";
-    }
-    if (main) {
-        main.style.display =
-            "none";
-    }
-    if (modal) {
-        modal.style.display =
-            "none";
-    }
-    if (footer) {
-        footer.style.display =
-            "none";
-    }
-}
-// ============================================================
-// SHOW LANDING PAGE
-// ============================================================
-function showLandingPage() {
-    const dashboard =
-        document.getElementById(
-            "teacherDashboard"
-        );
-    if (dashboard) {
-        dashboard.remove();
-    }
-    const header =
-        document.querySelector(
-            ".header"
-        );
-    const main =
-        document.querySelector(
-            "body > main"
-        );
-    const footer =
-        document.querySelector(
-            "body > footer"
-        );
-    if (header) {
-        header.style.display =
-            "";
-    }
-    if (main) {
-        main.style.display =
-            "";
-    }
-    if (footer) {
-        footer.style.display =
-            "";
-    }
-    document.body.classList.remove(
-        "dashboard-active"
-    );
-}
-// ============================================================
-// OPEN DASHBOARD SECTION
-// ============================================================
-function openDashboardSection(
+/* =========================================================
+   DASHBOARD NAVIGATION
+   ========================================================= */
+function showDashboardSection(
     sectionName,
-    button
+    clickedButton = null
 ) {
     const sections =
         document.querySelectorAll(
             ".dashboard-section"
         );
-    sections.forEach(
-        function (section) {
-            section.classList.remove(
-                "active"
-            );
-        }
-    );
-    const target =
-        document.getElementById(
-            "dashboard-section-" +
+    sections.forEach((section) => {
+        section.classList.remove(
+            "active"
+        );
+        if (
+            section.dataset.section ===
             sectionName
-        );
-    if (target) {
-        target.classList.add(
-            "active"
-        );
-    }
-    const menuItems =
-        document.querySelectorAll(
-            ".dashboard-menu-item"
-        );
-    menuItems.forEach(
-        function (item) {
-            item.classList.remove(
+        ) {
+            section.classList.add(
                 "active"
             );
         }
-    );
-    if (button) {
-        button.classList.add(
+    });
+    const navButtons =
+        document.querySelectorAll(
+            ".dashboard-nav-item"
+        );
+    navButtons.forEach((button) => {
+        button.classList.remove(
             "active"
         );
+    });
+    if (clickedButton) {
+        clickedButton.classList.add(
+            "active"
+        );
+    } else {
+        navButtons.forEach((button) => {
+            const text =
+                button.textContent
+                    .trim()
+                    .toLowerCase();
+            if (
+                text.includes(
+                    sectionName.toLowerCase()
+                )
+            ) {
+                button.classList.add(
+                    "active"
+                );
+            }
+        });
     }
 }
-// ============================================================
-// OPEN DASHBOARD SECTION BY NAME
-// ============================================================
-function openDashboardSectionByName(
-    sectionName
-) {
-    const targetButton =
-        document.querySelector(
-            `.dashboard-menu-item[onclick*="'${sectionName}'"]`
+/* =========================================================
+   LANDING PAGE
+   ========================================================= */
+function hideLandingPage() {
+    const header =
+        document.querySelector(".header");
+    const main =
+        document.querySelector("main");
+    const footer =
+        document.querySelector("footer");
+    if (header) {
+        header.style.display = "none";
+    }
+    if (main) {
+        main.style.display = "none";
+    }
+    if (footer) {
+        footer.style.display = "none";
+    }
+}
+function showLandingPage() {
+    const header =
+        document.querySelector(".header");
+    const main =
+        document.querySelector("main");
+    const footer =
+        document.querySelector("footer");
+    const dashboard =
+        document.getElementById(
+            "teacherDashboard"
         );
-    openDashboardSection(
-        sectionName,
-        targetButton
-    );
+    if (header) {
+        header.style.display = "";
+    }
+    if (main) {
+        main.style.display = "";
+    }
+    if (footer) {
+        footer.style.display = "";
+    }
+    if (dashboard) {
+        dashboard.remove();
+    }
 }
-// ============================================================
-// COMING SOON
-// ============================================================
-function showComingSoon(
-    featureName
+/* =========================================================
+   PROFILE HELPERS
+   ========================================================= */
+function profileDetail(
+    label,
+    value
 ) {
-    alert(
-        featureName +
-        " is prepared in the ClassMark dashboard and will be connected to the database in the next development stage."
-    );
+    return `
+        <div class="profile-detail">
+            <span>${escapeHTML(label)}</span>
+            <strong>${escapeHTML(value)}</strong>
+        </div>
+    `;
 }
-// ============================================================
-// USER DISPLAY NAME
-// ============================================================
-function getUserDisplayName(
-    user
-) {
+function getInitials(name) {
+    if (!name) {
+        return "CM";
+    }
+    const words =
+        name.trim().split(/\s+/);
+    if (words.length === 1) {
+        return words[0]
+            .substring(0, 2)
+            .toUpperCase();
+    }
+    return (
+        words[0].charAt(0) +
+        words[words.length - 1].charAt(0)
+    ).toUpperCase();
+}
+function getUserDisplayName(user) {
     if (!user) {
         return "Teacher";
     }
@@ -1232,16 +837,41 @@ function getUserDisplayName(
     return (
         metadata.full_name ||
         metadata.name ||
-        metadata.username ||
+        user.email?.split("@")[0] ||
         "Teacher"
     );
 }
-// ============================================================
-// HTML ESCAPE
-// ============================================================
-function escapeHTML(
-    value
+/* =========================================================
+   COMING SOON SECTION
+   ========================================================= */
+function comingSoonSection(
+    title,
+    description
 ) {
+    return `
+        <div class="coming-soon-card">
+            <div class="coming-soon-icon">
+                CM
+            </div>
+            <span class="dashboard-eyebrow">
+                CLASSMARK MODULE
+            </span>
+            <h2>
+                ${escapeHTML(title)}
+            </h2>
+            <p>
+                ${escapeHTML(description)}
+            </p>
+            <span class="coming-soon-status">
+                Module prepared — database connection coming next
+            </span>
+        </div>
+    `;
+}
+/* =========================================================
+   SECURITY — ESCAPE HTML
+   ========================================================= */
+function escapeHTML(value) {
     if (
         value === null ||
         value === undefined
@@ -1249,86 +879,60 @@ function escapeHTML(
         return "";
     }
     return String(value)
-        .replace(
-            /&/g,
-            "&amp;"
-        )
-        .replace(
-            /</g,
-            "&lt;"
-        )
-        .replace(
-            />/g,
-            "&gt;"
-        )
-        .replace(
-            /"/g,
-            "&quot;"
-        )
-        .replace(
-            /'/g,
-            "&#039;"
-        );
+        .replace(/&/g, "&amp;")
+        .replace(/</g, "&lt;")
+        .replace(/>/g, "&gt;")
+        .replace(/"/g, "&quot;")
+        .replace(/'/g, "&#039;");
 }
-// ============================================================
-// DASHBOARD STYLES
-// ============================================================
+/* =========================================================
+   DASHBOARD STYLES
+   ========================================================= */
 function addDashboardStyles() {
     if (
         document.getElementById(
-            "classmark-dashboard-styles"
+            "classmarkDashboardStyles"
         )
     ) {
         return;
     }
     const style =
-        document.createElement(
-            "style"
-        );
+        document.createElement("style");
     style.id =
-        "classmark-dashboard-styles";
+        "classmarkDashboardStyles";
     style.textContent = `
-        /* ==========================================
-           DASHBOARD BASE
-        =========================================== */
-        .teacher-dashboard {
-            position: fixed;
-            inset: 0;
-            z-index: 9999;
-            background: #070b14;
-            color: #f4f7fb;
-            overflow: auto;
-            font-family: inherit;
+        #teacherDashboard {
+            min-height: 100vh;
+            background: #f4f7fb;
+            color: #111827;
+            font-family: Arial, sans-serif;
         }
         .dashboard-shell {
             min-height: 100vh;
         }
-        /* ==========================================
-           HEADER
-        =========================================== */
-        .dashboard-header {
-            min-height: 76px;
-            padding: 14px 28px;
+        .dashboard-topbar {
+            height: 76px;
+            background: #0b1220;
+            color: #ffffff;
             display: flex;
             align-items: center;
             justify-content: space-between;
+            padding: 0 32px;
             gap: 20px;
-            background: #0b1220;
-            border-bottom: 1px solid rgba(255,255,255,0.08);
         }
         .dashboard-brand {
             display: flex;
             align-items: center;
             gap: 12px;
         }
-        .dashboard-logo {
-            width: 44px;
-            height: 44px;
+        .dashboard-brand-icon {
+            width: 42px;
+            height: 42px;
+            border-radius: 10px;
             display: grid;
             place-items: center;
-            border-radius: 12px;
-            background: #d6ad42;
-            color: #07101d;
+            background: #d4af37;
+            color: #0b1220;
             font-weight: 800;
         }
         .dashboard-brand strong {
@@ -1337,14 +941,14 @@ function addDashboardStyles() {
         }
         .dashboard-brand span {
             display: block;
-            margin-top: 2px;
             font-size: 12px;
-            color: #9aa6b8;
+            opacity: .65;
+            margin-top: 2px;
         }
         .dashboard-user {
             display: flex;
             align-items: center;
-            gap: 16px;
+            gap: 18px;
         }
         .dashboard-user-info {
             text-align: right;
@@ -1355,358 +959,358 @@ function addDashboardStyles() {
         }
         .dashboard-user-info span {
             display: block;
-            margin-top: 3px;
-            color: #8f9bad;
             font-size: 12px;
+            opacity: .65;
+            margin-top: 3px;
         }
         .dashboard-logout {
-            border: 1px solid rgba(214,173,66,0.45);
+            border: 1px solid rgba(255,255,255,.25);
             background: transparent;
-            color: #d6ad42;
+            color: white;
             padding: 9px 14px;
-            border-radius: 9px;
+            border-radius: 8px;
             cursor: pointer;
-            font-weight: 700;
         }
         .dashboard-logout:hover {
-            background: rgba(214,173,66,0.10);
+            background: rgba(255,255,255,.08);
         }
-        /* ==========================================
-           BODY
-        =========================================== */
-        .dashboard-body {
+        .dashboard-layout {
             min-height: calc(100vh - 76px);
             display: flex;
         }
-        /* ==========================================
-           SIDEBAR
-        =========================================== */
         .dashboard-sidebar {
-            width: 245px;
+            width: 250px;
             flex-shrink: 0;
-            padding: 22px 14px;
-            background: #090f1b;
-            border-right: 1px solid rgba(255,255,255,0.07);
+            background: #ffffff;
+            border-right: 1px solid #e5e7eb;
+            padding: 24px 14px;
         }
-        .dashboard-menu {
-            display: flex;
-            flex-direction: column;
+        .sidebar-profile {
+            text-align: center;
+            padding: 8px 10px 24px;
+            border-bottom: 1px solid #edf0f4;
+            margin-bottom: 16px;
+        }
+        .profile-avatar {
+            width: 58px;
+            height: 58px;
+            margin: 0 auto 10px;
+            border-radius: 50%;
+            display: grid;
+            place-items: center;
+            background: #0b1220;
+            color: #d4af37;
+            font-weight: 800;
+            font-size: 18px;
+        }
+        .sidebar-profile strong {
+            display: block;
+            font-size: 14px;
+        }
+        .sidebar-profile span {
+            display: block;
+            font-size: 12px;
+            color: #6b7280;
+            margin-top: 4px;
+        }
+        .dashboard-nav {
+            display: grid;
             gap: 5px;
         }
-        .dashboard-menu-item {
+        .dashboard-nav-item {
             width: 100%;
             border: 0;
             background: transparent;
-            color: #9ba7b8;
-            padding: 12px 14px;
-            border-radius: 10px;
+            color: #4b5563;
+            text-align: left;
+            padding: 11px 12px;
+            border-radius: 8px;
+            cursor: pointer;
             display: flex;
             align-items: center;
-            gap: 11px;
-            text-align: left;
-            cursor: pointer;
-            font: inherit;
+            gap: 10px;
+            font-size: 13px;
         }
-        .dashboard-menu-item:hover {
-            background: rgba(255,255,255,0.05);
-            color: #ffffff;
-        }
-        .dashboard-menu-item.active {
-            background: rgba(214,173,66,0.13);
-            color: #d6ad42;
-        }
-        .dashboard-menu-item span:first-child {
-            width: 24px;
+        .dashboard-nav-item span {
+            width: 22px;
             text-align: center;
         }
-        /* ==========================================
-           MAIN
-        =========================================== */
+        .dashboard-nav-item:hover {
+            background: #f3f6fa;
+            color: #0b1220;
+        }
+        .dashboard-nav-item.active {
+            background: #0b1220;
+            color: #ffffff;
+        }
         .dashboard-main {
             flex: 1;
-            padding: 32px;
-            overflow-x: hidden;
+            padding: 34px;
+            min-width: 0;
         }
         .dashboard-section {
             display: none;
-            max-width: 1250px;
-            margin: 0 auto;
         }
         .dashboard-section.active {
             display: block;
         }
-        .dashboard-page-heading {
+        .dashboard-welcome {
             margin-bottom: 28px;
         }
-        .dashboard-page-heading > span {
-            display: block;
-            margin-bottom: 7px;
-            color: #d6ad42;
+        .dashboard-eyebrow {
+            display: inline-block;
+            color: #9a7b18;
             font-size: 11px;
             font-weight: 800;
-            letter-spacing: 1.5px;
+            letter-spacing: 1.2px;
         }
-        .dashboard-page-heading h1 {
+        .dashboard-welcome h1 {
+            margin: 7px 0 8px;
+            font-size: 32px;
+            line-height: 1.15;
+        }
+        .dashboard-welcome p {
             margin: 0;
-            font-size: clamp(28px, 4vw, 42px);
-            line-height: 1.1;
+            color: #6b7280;
+            max-width: 680px;
+            line-height: 1.6;
         }
-        .dashboard-page-heading p {
-            margin: 10px 0 0;
-            max-width: 650px;
-            color: #9ba7b8;
-            line-height: 1.7;
+        .teacher-profile-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 24px;
+            margin-bottom: 24px;
+            box-shadow: 0 8px 24px rgba(15,23,42,.05);
         }
-        /* ==========================================
-           STATISTICS
-        =========================================== */
-        .dashboard-stat-grid {
+        .profile-card-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            gap: 20px;
+            margin-bottom: 20px;
+        }
+        .profile-card-header h2 {
+            margin: 6px 0 0;
+            font-size: 20px;
+        }
+        .profile-status {
+            background: #ecfdf5;
+            color: #047857;
+            border: 1px solid #a7f3d0;
+            border-radius: 999px;
+            padding: 7px 11px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        .profile-details-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 16px;
-            margin-bottom: 22px;
+            gap: 12px;
+        }
+        .profile-detail {
+            background: #f8fafc;
+            border: 1px solid #eef2f7;
+            border-radius: 10px;
+            padding: 13px;
+        }
+        .profile-detail span {
+            display: block;
+            color: #6b7280;
+            font-size: 11px;
+            margin-bottom: 5px;
+        }
+        .profile-detail strong {
+            display: block;
+            font-size: 13px;
+            overflow-wrap: anywhere;
+        }
+        .dashboard-stats {
+            display: grid;
+            grid-template-columns: repeat(4, minmax(0, 1fr));
+            gap: 14px;
+            margin-bottom: 30px;
         }
         .dashboard-stat-card {
-            padding: 20px;
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
             border-radius: 14px;
-            background: #0d1524;
-            border: 1px solid rgba(255,255,255,0.07);
-            display: flex;
-            align-items: center;
-            gap: 14px;
-        }
-        .dashboard-stat-icon {
-            width: 46px;
-            height: 46px;
-            display: grid;
-            place-items: center;
-            border-radius: 12px;
-            background: rgba(214,173,66,0.10);
-            font-size: 21px;
-        }
-        .dashboard-stat-card strong {
-            display: block;
-            font-size: 25px;
+            padding: 20px;
         }
         .dashboard-stat-card span {
             display: block;
-            margin-top: 4px;
-            color: #8f9bad;
+            color: #6b7280;
             font-size: 12px;
         }
-        /* ==========================================
-           PANELS
-        =========================================== */
-        .dashboard-panel {
-            margin-bottom: 20px;
-            padding: 22px;
-            border-radius: 15px;
-            background: #0d1524;
-            border: 1px solid rgba(255,255,255,0.07);
+        .dashboard-stat-card strong {
+            display: block;
+            font-size: 28px;
+            margin: 8px 0 4px;
+            color: #0b1220;
         }
-        .dashboard-panel-header {
-            margin-bottom: 18px;
+        .dashboard-stat-card small {
+            color: #9ca3af;
+            font-size: 11px;
         }
-        .dashboard-panel-header h2 {
-            margin: 0;
-            font-size: 19px;
+        .quick-actions h2 {
+            font-size: 20px;
+            margin: 0 0 14px;
         }
-        .dashboard-panel-header p {
-            margin: 6px 0 0;
-            color: #8995a7;
-            font-size: 13px;
-        }
-        /* ==========================================
-           QUICK ACTIONS
-        =========================================== */
-        .dashboard-action-grid {
+        .quick-action-grid {
             display: grid;
             grid-template-columns: repeat(4, minmax(0, 1fr));
-            gap: 12px;
+            gap: 14px;
         }
-        .dashboard-action-grid button {
-            padding: 18px;
-            border: 1px solid rgba(255,255,255,0.07);
-            border-radius: 12px;
-            background: #111b2c;
-            color: #ffffff;
+        .quick-action-grid button {
+            border: 1px solid #e5e7eb;
+            background: #ffffff;
+            border-radius: 14px;
+            padding: 20px;
             text-align: left;
             cursor: pointer;
-            font: inherit;
+            transition: .2s ease;
         }
-        .dashboard-action-grid button:hover {
-            border-color: rgba(214,173,66,0.40);
-            transform: translateY(-1px);
+        .quick-action-grid button:hover {
+            transform: translateY(-2px);
+            border-color: #d4af37;
+            box-shadow: 0 8px 20px rgba(15,23,42,.07);
         }
-        .dashboard-action-grid button > span {
+        .quick-action-grid span {
             display: block;
+            font-size: 25px;
             margin-bottom: 12px;
-            font-size: 24px;
         }
-        .dashboard-action-grid strong {
+        .quick-action-grid strong {
             display: block;
             font-size: 14px;
+            color: #111827;
         }
-        .dashboard-action-grid small {
+        .quick-action-grid small {
             display: block;
-            margin-top: 6px;
-            color: #8f9bad;
-            line-height: 1.5;
+            color: #6b7280;
+            margin-top: 5px;
+            line-height: 1.4;
         }
-        /* ==========================================
-           INFO GRID
-        =========================================== */
-        .dashboard-info-grid {
-            display: grid;
-            grid-template-columns: repeat(2, minmax(0, 1fr));
-            gap: 12px;
-        }
-        .dashboard-info-grid > div {
-            padding: 16px;
-            border-radius: 11px;
-            background: #111b2c;
-            border: 1px solid rgba(255,255,255,0.06);
-        }
-        .dashboard-info-grid span {
-            display: block;
-            color: #7f8b9d;
-            font-size: 11px;
-            text-transform: uppercase;
-            letter-spacing: 0.7px;
-        }
-        .dashboard-info-grid strong {
-            display: block;
-            margin-top: 7px;
-            font-size: 14px;
-            word-break: break-word;
-        }
-        /* ==========================================
-           EMPTY STATE
-        =========================================== */
-        .empty-dashboard-state {
-            min-height: 300px;
-            display: flex;
-            flex-direction: column;
-            align-items: center;
-            justify-content: center;
+        .coming-soon-card {
+            background: #ffffff;
+            border: 1px solid #e5e7eb;
+            border-radius: 16px;
+            padding: 50px 30px;
             text-align: center;
-            padding: 30px;
+            max-width: 720px;
+            margin: 40px auto;
+            box-shadow: 0 8px 24px rgba(15,23,42,.05);
         }
-        .empty-dashboard-state > div {
+        .coming-soon-icon {
             width: 64px;
             height: 64px;
+            margin: 0 auto 18px;
+            border-radius: 14px;
             display: grid;
             place-items: center;
-            border-radius: 18px;
-            background: rgba(214,173,66,0.10);
-            font-size: 30px;
-            margin-bottom: 16px;
-        }
-        .empty-dashboard-state h2 {
-            margin: 0;
-            font-size: 20px;
-        }
-        .empty-dashboard-state p {
-            max-width: 500px;
-            margin: 9px auto 18px;
-            color: #8f9bad;
-            line-height: 1.7;
-        }
-        .dashboard-primary-button {
-            border: 0;
-            border-radius: 9px;
-            padding: 11px 17px;
-            background: #d6ad42;
-            color: #07101d;
+            background: #0b1220;
+            color: #d4af37;
             font-weight: 800;
-            cursor: pointer;
         }
-        .dashboard-primary-button:hover {
-            filter: brightness(1.08);
+        .coming-soon-card h2 {
+            margin: 8px 0;
+            font-size: 25px;
         }
-        /* ==========================================
-           MOBILE
-        =========================================== */
-        @media (max-width: 900px) {
-            .dashboard-stat-grid {
+        .coming-soon-card p {
+            color: #6b7280;
+            line-height: 1.6;
+            max-width: 560px;
+            margin: 0 auto 20px;
+        }
+        .coming-soon-status {
+            display: inline-block;
+            color: #9a7b18;
+            background: #fffbeb;
+            border: 1px solid #fde68a;
+            border-radius: 999px;
+            padding: 8px 12px;
+            font-size: 11px;
+            font-weight: 700;
+        }
+        @media (max-width: 1050px) {
+            .profile-details-grid {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
-            .dashboard-action-grid {
+            .dashboard-stats {
                 grid-template-columns: repeat(2, minmax(0, 1fr));
             }
-            .dashboard-sidebar {
-                width: 210px;
+            .quick-action-grid {
+                grid-template-columns: repeat(2, minmax(0, 1fr));
             }
         }
-        @media (max-width: 680px) {
-            .dashboard-header {
-                padding: 12px 16px;
+        @media (max-width: 800px) {
+            .dashboard-topbar {
+                height: auto;
+                padding: 16px 20px;
+                align-items: flex-start;
             }
             .dashboard-user-info {
                 display: none;
             }
-            .dashboard-body {
+            .dashboard-layout {
                 display: block;
             }
             .dashboard-sidebar {
                 width: 100%;
-                padding: 10px;
                 border-right: 0;
-                border-bottom: 1px solid rgba(255,255,255,0.07);
+                border-bottom: 1px solid #e5e7eb;
+                padding: 14px;
             }
-            .dashboard-menu {
-                display: grid;
-                grid-template-columns: repeat(3, 1fr);
-                gap: 5px;
+            .sidebar-profile {
+                display: none;
             }
-            .dashboard-menu-item {
-                justify-content: center;
-                flex-direction: column;
-                gap: 4px;
-                padding: 9px 5px;
-                font-size: 10px;
-                text-align: center;
+            .dashboard-nav {
+                display: flex;
+                overflow-x: auto;
+                padding-bottom: 2px;
             }
-            .dashboard-menu-item span:first-child {
+            .dashboard-nav-item {
                 width: auto;
+                flex-shrink: 0;
+                white-space: nowrap;
             }
             .dashboard-main {
-                padding: 20px 14px;
+                padding: 22px 16px;
             }
-            .dashboard-stat-grid {
-                grid-template-columns: 1fr 1fr;
-                gap: 10px;
-            }
-            .dashboard-stat-card {
-                padding: 15px;
-                flex-direction: column;
-                align-items: flex-start;
-            }
-            .dashboard-action-grid {
-                grid-template-columns: 1fr;
-            }
-            .dashboard-info-grid {
-                grid-template-columns: 1fr;
+            .dashboard-welcome h1 {
+                font-size: 27px;
             }
         }
-        @media (max-width: 420px) {
-            .dashboard-stat-grid {
-                grid-template-columns: 1fr;
+        @media (max-width: 560px) {
+            .dashboard-topbar {
+                padding: 14px 15px;
             }
-            .dashboard-logo {
+            .dashboard-brand-icon {
                 width: 38px;
                 height: 38px;
             }
             .dashboard-brand strong {
                 font-size: 16px;
             }
-            .dashboard-logout {
-                padding: 8px 11px;
-                font-size: 12px;
+            .dashboard-main {
+                padding: 20px 13px;
+            }
+            .profile-details-grid,
+            .dashboard-stats,
+            .quick-action-grid {
+                grid-template-columns: 1fr;
+            }
+            .teacher-profile-card {
+                padding: 18px;
+            }
+            .profile-card-header {
+                display: block;
+            }
+            .profile-status {
+                display: inline-block;
+                margin-top: 12px;
             }
         }
     `;
-    document.head.appendChild(
-        style
-    );
+    document.head.appendChild(style);
 }
