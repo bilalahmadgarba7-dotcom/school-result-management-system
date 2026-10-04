@@ -46,12 +46,13 @@ button {
     position: sticky;
     top: 0;
     z-index: 100;
-    background: rgba(7, 11, 20, 0.90);
-    border-bottom: 1px solid var(--border-light);
-    backdrop-filter: blur(14px);
+    background: rgba(7, 11, 20, 0.88);
+    border-bottom: 1px solid rgba(212, 175, 55, 0.14);
+    backdrop-filter: blur(16px);
+    -webkit-backdrop-filter: blur(16px);
 }
 .nav {
-    min-height: 74px;
+    min-height: 76px;
     display: flex;
     align-items: center;
     justify-content: space-between;
@@ -59,24 +60,88 @@ button {
 .logo {
     display: flex;
     align-items: center;
-    gap: 11px;
+    gap: 12px;
     color: var(--white);
     text-decoration: none;
     font-size: 21px;
-    font-weight: 800;
-    letter-spacing: -0.3px;
+    font-weight: 850;
+    letter-spacing: -0.4px;
 }
 .logo-icon {
-    width: 40px;
-    height: 40px;
+    width: 42px;
+    height: 42px;
     display: grid;
     place-items: center;
-    border-radius: 11px;
-    background: linear-gradient(135deg, #d4af37, #f5d76e);
+    border-radius: 12px;
+    background:
+        linear-gradient(
+            135deg,
+            #b88a18 0%,
+            #d4af37 45%,
+            #f5d76e 100%
+        );
     color: #070b14;
     font-size: 13px;
     font-weight: 900;
-    box-shadow: 0 8px 25px rgba(212, 175, 55, 0.18);
+    border: 1px solid rgba(255, 255, 255, 0.18);
+    box-shadow:
+        0 8px 25px rgba(212, 175, 55, 0.18),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+/* =========================
+   BUTTONS
+========================= */
+.login-btn,
+.primary-btn,
+.secondary-btn {
+    border: none;
+    border-radius: 11px;
+    padding: 12px 21px;
+    font-size: 14px;
+    font-weight: 750;
+    transition:
+        transform 0.25s ease,
+        box-shadow 0.25s ease,
+        background 0.25s ease,
+        border-color 0.25s ease;
+}
+.login-btn,
+.primary-btn {
+    background:
+        linear-gradient(
+            135deg,
+            #b88a18 0%,
+            #d4af37 45%,
+            #f1d46a 100%
+        );
+    color: #070b14;
+    border: 1px solid rgba(255, 255, 255, 0.12);
+    box-shadow:
+        0 8px 24px rgba(212, 175, 55, 0.16),
+        inset 0 1px 0 rgba(255, 255, 255, 0.35);
+}
+.login-btn:hover,
+.primary-btn:hover {
+    transform: translateY(-2px);
+    box-shadow:
+        0 12px 32px rgba(212, 175, 55, 0.25),
+        inset 0 1px 0 rgba(255, 255, 255, 0.4);
+}
+.login-btn:active,
+.primary-btn:active {
+    transform: translateY(0);
+}
+.secondary-btn {
+    background: rgba(255, 255, 255, 0.035);
+    color: var(--white);
+    border: 1px solid rgba(255, 255, 255, 0.11);
+    box-shadow:
+        inset 0 1px 0 rgba(255, 255, 255, 0.03);
+}
+.secondary-btn:hover {
+    background: rgba(212, 175, 55, 0.07);
+    border-color: rgba(212, 175, 55, 0.28);
+    transform: translateY(-2px);
 }
 /* =========================
    BUTTONS
