@@ -34,8 +34,10 @@ let currentUser = null;
 let teacherProfile = null;
 
 let studentsCache = [];
+let subjectsCache = [];
 
 let editingStudentId = null;
+let editingSubjectId = null;
 
 
 // ------------------------------------------
@@ -81,6 +83,7 @@ async function checkAuthentication() {
             );
 
             return;
+
         }
 
 
@@ -135,11 +138,6 @@ supabaseClient
                     session.user;
 
 
-                /*
-                 * If a session already exists
-                 * and the dashboard is not visible,
-                 * load the teacher profile.
-                 */
                 if (
                     !teacherProfile &&
                     !document.getElementById(
@@ -162,10 +160,16 @@ supabaseClient
             } else {
 
                 currentUser = null;
+
                 teacherProfile = null;
 
                 editingStudentId = null;
+
+                editingSubjectId = null;
+
                 studentsCache = [];
+
+                subjectsCache = [];
 
             }
 
@@ -188,6 +192,7 @@ async function login(event) {
             .value
             .trim();
 
+
     const password =
         document
             .getElementById("password")
@@ -201,6 +206,7 @@ async function login(event) {
         );
 
         return;
+
     }
 
 
@@ -246,6 +252,7 @@ async function login(event) {
             );
 
             return;
+
         }
 
 
@@ -575,7 +582,7 @@ function showTeacherDashboard() {
                 <button
                     type="button"
                     class="dashboard-card dashboard-card-button"
-                    onclick="showSubjectsComingSoon()"
+                    onclick="showSubjects()"
                 >
 
                     <span>
@@ -666,15 +673,6 @@ function showTeacherDashboard() {
 // COMING SOON ACTIONS
 // ==========================================
 
-function showSubjectsComingSoon() {
-
-    alert(
-        "Subjects Management will be added next."
-    );
-
-}
-
-
 function showMarksComingSoon() {
 
     alert(
@@ -731,7 +729,11 @@ async function logoutTeacher() {
 
         studentsCache = [];
 
+        subjectsCache = [];
+
         editingStudentId = null;
+
+        editingSubjectId = null;
 
 
         const dashboard =
@@ -1029,7 +1031,8 @@ function addDashboardStyles() {
 
             .dashboard-welcome {
 
-                padding: 25px;
+                padding:
+                    25px;
 
             }
 
@@ -1081,15 +1084,28 @@ async function showStudents() {
     }
 
 
-    const existing =
+    const existingStudents =
         document.getElementById(
             "studentsSection"
         );
 
 
-    if (existing) {
+    const existingSubjects =
+        document.getElementById(
+            "subjectsSection"
+        );
 
-        existing.remove();
+
+    if (existingStudents) {
+
+        existingStudents.remove();
+
+    }
+
+
+    if (existingSubjects) {
+
+        existingSubjects.remove();
 
     }
 
@@ -1793,12 +1809,18 @@ async function saveStudent(event) {
         );
 
 
+    const wasEditing =
+        Boolean(
+            editingStudentId
+        );
+
+
     if (submitButton) {
 
         submitButton.disabled = true;
 
         submitButton.textContent =
-            editingStudentId
+            wasEditing
                 ? "Updating..."
                 : "Saving...";
 
@@ -1842,10 +1864,6 @@ async function saveStudent(event) {
         let response;
 
 
-        // ----------------------------------
-        // UPDATE EXISTING STUDENT
-        // ----------------------------------
-
         if (editingStudentId) {
 
             response =
@@ -1862,11 +1880,6 @@ async function saveStudent(event) {
                         "teacher_id",
                         currentUser.id
                     );
-
-
-        // ----------------------------------
-        // INSERT NEW STUDENT
-        // ----------------------------------
 
         } else {
 
@@ -1893,7 +1906,6 @@ async function saveStudent(event) {
             );
 
 
-            // PostgreSQL duplicate error
             if (
                 error.code === "23505"
             ) {
@@ -1914,12 +1926,6 @@ async function saveStudent(event) {
             return;
 
         }
-
-
-        const wasEditing =
-            Boolean(
-                editingStudentId
-            );
 
 
         closeStudentForm();
@@ -1955,7 +1961,7 @@ async function saveStudent(event) {
             submitButton.disabled = false;
 
             submitButton.textContent =
-                editingStudentId
+                wasEditing
                     ? "Update Student"
                     : "Save Student";
 
@@ -2332,37 +2338,21 @@ function renderStudents(students) {
 
                     <tr>
 
-                        <th>
-                            #
-                        </th>
+                        <th>#</th>
 
-                        <th>
-                            Student
-                        </th>
+                        <th>Student</th>
 
-                        <th>
-                            Gender
-                        </th>
+                        <th>Gender</th>
 
-                        <th>
-                            Admission No.
-                        </th>
+                        <th>Admission No.</th>
 
-                        <th>
-                            Class
-                        </th>
+                        <th>Class</th>
 
-                        <th>
-                            Session
-                        </th>
+                        <th>Session</th>
 
-                        <th>
-                            Term
-                        </th>
+                        <th>Term</th>
 
-                        <th>
-                            Actions
-                        </th>
+                        <th>Actions</th>
 
                     </tr>
 
@@ -2431,29 +2421,23 @@ function renderStudents(students) {
 
 
                                         <td>
-
                                             ${escapeHTML(
                                                 student.class_name
                                             )}
-
                                         </td>
 
 
                                         <td>
-
                                             ${escapeHTML(
                                                 student.session
                                             )}
-
                                         </td>
 
 
                                         <td>
-
                                             ${escapeHTML(
                                                 student.term
                                             )}
-
                                         </td>
 
 
@@ -3548,6 +3532,2108 @@ function addStudentsStyles() {
 
                 width:
                     100%;
+
+            }
+
+        }
+
+    `;
+
+
+    document.head.appendChild(style);
+
+}
+
+
+// ==========================================
+// SUBJECTS MANAGEMENT
+// ==========================================
+
+async function showSubjects() {
+
+    if (!currentUser) {
+
+        alert(
+            "Please login first."
+        );
+
+        return;
+
+    }
+
+
+    const dashboard =
+        document.getElementById(
+            "teacherDashboard"
+        );
+
+
+    if (!dashboard) {
+
+        return;
+
+    }
+
+
+    const existingStudents =
+        document.getElementById(
+            "studentsSection"
+        );
+
+
+    const existingSubjects =
+        document.getElementById(
+            "subjectsSection"
+        );
+
+
+    if (existingStudents) {
+
+        existingStudents.remove();
+
+    }
+
+
+    if (existingSubjects) {
+
+        existingSubjects.remove();
+
+    }
+
+
+    editingSubjectId = null;
+
+
+    const section =
+        document.createElement("section");
+
+
+    section.id =
+        "subjectsSection";
+
+
+    section.className =
+        "subjects-section";
+
+
+    section.innerHTML = `
+
+        <div class="subjects-header">
+
+            <div>
+
+                <span class="hero-badge">
+                    SUBJECT MANAGEMENT
+                </span>
+
+
+                <h2>
+                    Subjects
+                </h2>
+
+
+                <p>
+                    Add, search and manage subjects for your class.
+                </p>
+
+            </div>
+
+
+            <button
+                type="button"
+                class="primary-btn"
+                onclick="openSubjectForm()"
+            >
+                + Add Subject
+            </button>
+
+        </div>
+
+
+        <div class="subjects-toolbar">
+
+            <div class="subject-count">
+
+                <strong id="subjectCount">
+                    0
+                </strong>
+
+                <span>
+                    Subjects
+                </span>
+
+            </div>
+
+
+            <div class="subject-search">
+
+                <label
+                    for="subjectSearch"
+                    class="sr-only"
+                >
+                    Search subjects
+                </label>
+
+                <input
+                    type="search"
+                    id="subjectSearch"
+                    placeholder="Search subject, code or class..."
+                    oninput="filterSubjects()"
+                    autocomplete="off"
+                >
+
+            </div>
+
+        </div>
+
+
+        <div
+            id="subjectFormContainer"
+            class="subject-form-container"
+            style="display:none;"
+        >
+
+            <div class="subject-form-heading">
+
+                <span class="hero-badge">
+                    SUBJECT RECORD
+                </span>
+
+
+                <h3 id="subjectFormTitle">
+                    Add Subject
+                </h3>
+
+            </div>
+
+
+            <form
+                id="subjectForm"
+                onsubmit="saveSubject(event)"
+            >
+
+                <div class="form-grid">
+
+
+                    <div>
+
+                        <label for="subjectName">
+                            Subject Name
+                        </label>
+
+                        <input
+                            type="text"
+                            id="subjectName"
+                            placeholder="e.g. Mathematics"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div>
+
+                        <label for="subjectCode">
+                            Subject Code
+                        </label>
+
+                        <input
+                            type="text"
+                            id="subjectCode"
+                            placeholder="e.g. MTH101"
+                        >
+
+                    </div>
+
+
+                    <div>
+
+                        <label for="subjectClass">
+                            Class
+                        </label>
+
+                        <input
+                            type="text"
+                            id="subjectClass"
+                            placeholder="e.g. JSS2A"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div>
+
+                        <label for="subjectSession">
+                            Academic Session
+                        </label>
+
+                        <input
+                            type="text"
+                            id="subjectSession"
+                            placeholder="e.g. 2026/2027"
+                            required
+                        >
+
+                    </div>
+
+
+                    <div>
+
+                        <label for="subjectTerm">
+                            Term
+                        </label>
+
+                        <select
+                            id="subjectTerm"
+                            required
+                        >
+
+                            <option value="">
+                                Select term
+                            </option>
+
+                            <option value="First Term">
+                                First Term
+                            </option>
+
+                            <option value="Second Term">
+                                Second Term
+                            </option>
+
+                            <option value="Third Term">
+                                Third Term
+                            </option>
+
+                        </select>
+
+                    </div>
+
+
+                </div>
+
+
+                <div
+                    id="subjectFormError"
+                    class="form-error"
+                    role="alert"
+                ></div>
+
+
+                <div class="form-actions">
+
+                    <button
+                        type="button"
+                        class="secondary-btn"
+                        onclick="closeSubjectForm()"
+                    >
+                        Cancel
+                    </button>
+
+
+                    <button
+                        type="submit"
+                        class="primary-btn"
+                        id="subjectSubmitButton"
+                    >
+                        Save Subject
+                    </button>
+
+                </div>
+
+            </form>
+
+        </div>
+
+
+        <div
+            id="subjectsList"
+            class="subjects-list"
+        >
+
+            <div class="subjects-loading">
+                Loading subjects...
+            </div>
+
+        </div>
+
+    `;
+
+
+    dashboard.appendChild(section);
+
+
+    addSubjectsStyles();
+
+
+    await loadSubjects();
+
+}
+
+
+// ==========================================
+// SUBJECT FORM
+// ==========================================
+
+function openSubjectForm(subjectId = null) {
+
+    const formContainer =
+        document.getElementById(
+            "subjectFormContainer"
+        );
+
+
+    const form =
+        document.getElementById(
+            "subjectForm"
+        );
+
+
+    if (!formContainer || !form) {
+
+        return;
+
+    }
+
+
+    editingSubjectId =
+        subjectId;
+
+
+    form.reset();
+
+
+    const title =
+        document.getElementById(
+            "subjectFormTitle"
+        );
+
+
+    const submitButton =
+        document.getElementById(
+            "subjectSubmitButton"
+        );
+
+
+    if (subjectId) {
+
+        const subject =
+            subjectsCache.find(
+                item =>
+                    item.id === subjectId
+            );
+
+
+        if (!subject) {
+
+            showSubjectFormError(
+                "Subject record could not be found."
+            );
+
+            return;
+
+        }
+
+
+        document
+            .getElementById("subjectName")
+            .value =
+                subject.subject_name || "";
+
+
+        document
+            .getElementById("subjectCode")
+            .value =
+                subject.subject_code || "";
+
+
+        document
+            .getElementById("subjectClass")
+            .value =
+                subject.class_name || "";
+
+
+        document
+            .getElementById("subjectSession")
+            .value =
+                subject.session || "";
+
+
+        document
+            .getElementById("subjectTerm")
+            .value =
+                subject.term || "";
+
+
+        if (title) {
+
+            title.textContent =
+                "Edit Subject";
+
+        }
+
+
+        if (submitButton) {
+
+            submitButton.textContent =
+                "Update Subject";
+
+        }
+
+
+    } else {
+
+        document
+            .getElementById("subjectClass")
+            .value =
+                teacherProfile?.class_name || "";
+
+
+        document
+            .getElementById("subjectSession")
+            .value =
+                teacherProfile?.session || "";
+
+
+        document
+            .getElementById("subjectTerm")
+            .value =
+                teacherProfile?.term || "";
+
+
+        if (title) {
+
+            title.textContent =
+                "Add Subject";
+
+        }
+
+
+        if (submitButton) {
+
+            submitButton.textContent =
+                "Save Subject";
+
+        }
+
+    }
+
+
+    showSubjectFormError("");
+
+
+    formContainer.style.display =
+        "block";
+
+
+    formContainer.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+
+
+    setTimeout(
+        function () {
+
+            document
+                .getElementById("subjectName")
+                ?.focus();
+
+        },
+        200
+    );
+
+}
+
+
+// ==========================================
+// CLOSE SUBJECT FORM
+// ==========================================
+
+function closeSubjectForm() {
+
+    const formContainer =
+        document.getElementById(
+            "subjectFormContainer"
+        );
+
+
+    if (formContainer) {
+
+        formContainer.style.display =
+            "none";
+
+    }
+
+
+    editingSubjectId = null;
+
+
+    const form =
+        document.getElementById(
+            "subjectForm"
+        );
+
+
+    if (form) {
+
+        form.reset();
+
+    }
+
+
+    const title =
+        document.getElementById(
+            "subjectFormTitle"
+        );
+
+
+    if (title) {
+
+        title.textContent =
+            "Add Subject";
+
+    }
+
+
+    const submitButton =
+        document.getElementById(
+            "subjectSubmitButton"
+        );
+
+
+    if (submitButton) {
+
+        submitButton.textContent =
+            "Save Subject";
+
+    }
+
+
+    showSubjectFormError("");
+
+}
+
+
+// ==========================================
+// SAVE / UPDATE SUBJECT
+// ==========================================
+
+async function saveSubject(event) {
+
+    event.preventDefault();
+
+
+    if (!currentUser) {
+
+        showSubjectFormError(
+            "You must be logged in."
+        );
+
+        return;
+
+    }
+
+
+    const subjectName =
+        document
+            .getElementById("subjectName")
+            .value
+            .trim();
+
+
+    const subjectCode =
+        document
+            .getElementById("subjectCode")
+            .value
+            .trim() ||
+        null;
+
+
+    const className =
+        document
+            .getElementById("subjectClass")
+            .value
+            .trim();
+
+
+    const session =
+        document
+            .getElementById("subjectSession")
+            .value
+            .trim();
+
+
+    const term =
+        document
+            .getElementById("subjectTerm")
+            .value;
+
+
+    if (!subjectName) {
+
+        showSubjectFormError(
+            "Please enter the subject name."
+        );
+
+        return;
+
+    }
+
+
+    if (!className) {
+
+        showSubjectFormError(
+            "Please enter the class."
+        );
+
+        return;
+
+    }
+
+
+    if (!session) {
+
+        showSubjectFormError(
+            "Please enter the academic session."
+        );
+
+        return;
+
+    }
+
+
+    if (!term) {
+
+        showSubjectFormError(
+            "Please select the term."
+        );
+
+        return;
+
+    }
+
+
+    const duplicate =
+        subjectsCache.find(
+            function (subject) {
+
+                const sameName =
+                    String(
+                        subject.subject_name || ""
+                    )
+                    .trim()
+                    .toLowerCase() ===
+                    subjectName
+                        .toLowerCase();
+
+
+                const sameClass =
+                    String(
+                        subject.class_name || ""
+                    )
+                    .trim()
+                    .toLowerCase() ===
+                    className
+                        .toLowerCase();
+
+
+                const sameSession =
+                    String(
+                        subject.session || ""
+                    )
+                    .trim()
+                    .toLowerCase() ===
+                    session
+                        .toLowerCase();
+
+
+                const sameTerm =
+                    String(
+                        subject.term || ""
+                    )
+                    .trim()
+                    .toLowerCase() ===
+                    term
+                        .toLowerCase();
+
+
+                const differentRecord =
+                    subject.id !==
+                    editingSubjectId;
+
+
+                return (
+                    sameName &&
+                    sameClass &&
+                    sameSession &&
+                    sameTerm &&
+                    differentRecord
+                );
+
+            }
+        );
+
+
+    if (duplicate) {
+
+        showSubjectFormError(
+            "This subject already exists for this class, session and term."
+        );
+
+        return;
+
+    }
+
+
+    const submitButton =
+        document.getElementById(
+            "subjectSubmitButton"
+        );
+
+
+    const wasEditing =
+        Boolean(
+            editingSubjectId
+        );
+
+
+    if (submitButton) {
+
+        submitButton.disabled = true;
+
+        submitButton.textContent =
+            wasEditing
+                ? "Updating..."
+                : "Saving...";
+
+    }
+
+
+    showSubjectFormError("");
+
+
+    try {
+
+        const subjectData = {
+
+            teacher_id:
+                currentUser.id,
+
+            subject_name:
+                subjectName,
+
+            subject_code:
+                subjectCode,
+
+            class_name:
+                className,
+
+            session:
+                session,
+
+            term:
+                term
+
+        };
+
+
+        let response;
+
+
+        if (editingSubjectId) {
+
+            response =
+                await supabaseClient
+                    .from("subjects")
+                    .update(
+                        subjectData
+                    )
+                    .eq(
+                        "id",
+                        editingSubjectId
+                    )
+                    .eq(
+                        "teacher_id",
+                        currentUser.id
+                    );
+
+        } else {
+
+            response =
+                await supabaseClient
+                    .from("subjects")
+                    .insert([
+                        subjectData
+                    ]);
+
+        }
+
+
+        const {
+            error
+        } = response;
+
+
+        if (error) {
+
+            console.error(
+                "Subject save/update error:",
+                error
+            );
+
+
+            if (
+                error.code === "23505"
+            ) {
+
+                showSubjectFormError(
+                    "This subject already exists for this class, session and term."
+                );
+
+            } else {
+
+                showSubjectFormError(
+                    "Unable to save the subject. Please check the information and try again."
+                );
+
+            }
+
+
+            return;
+
+        }
+
+
+        closeSubjectForm();
+
+
+        await loadSubjects();
+
+
+        console.log(
+            wasEditing
+                ? "Subject updated successfully."
+                : "Subject added successfully."
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected subject save error:",
+            error
+        );
+
+
+        showSubjectFormError(
+            "Something went wrong. Please try again."
+        );
+
+
+    } finally {
+
+        if (submitButton) {
+
+            submitButton.disabled = false;
+
+            submitButton.textContent =
+                wasEditing
+                    ? "Update Subject"
+                    : "Save Subject";
+
+        }
+
+    }
+
+}
+
+
+// ==========================================
+// LOAD SUBJECTS
+// ==========================================
+
+async function loadSubjects() {
+
+    const list =
+        document.getElementById(
+            "subjectsList"
+        );
+
+
+    if (!list || !currentUser) {
+
+        return;
+
+    }
+
+
+    list.innerHTML = `
+
+        <div class="subjects-loading">
+            Loading subjects...
+        </div>
+
+    `;
+
+
+    try {
+
+        const {
+            data,
+            error
+        } =
+            await supabaseClient
+                .from("subjects")
+                .select(`
+                    id,
+                    subject_name,
+                    subject_code,
+                    class_name,
+                    session,
+                    term,
+                    created_at
+                `)
+                .eq(
+                    "teacher_id",
+                    currentUser.id
+                )
+                .order(
+                    "subject_name",
+                    {
+                        ascending:
+                            true
+                    }
+                );
+
+
+        if (error) {
+
+            console.error(
+                "Subject loading error:",
+                error
+            );
+
+
+            list.innerHTML = `
+
+                <div class="subjects-error">
+
+                    <strong>
+                        Unable to load subjects.
+                    </strong>
+
+                    <p>
+                        Please try again.
+                    </p>
+
+                </div>
+
+            `;
+
+            return;
+
+        }
+
+
+        subjectsCache =
+            data || [];
+
+
+        subjectsCache.sort(
+            function (a, b) {
+
+                return String(
+                    a.subject_name || ""
+                ).localeCompare(
+                    String(
+                        b.subject_name || ""
+                    ),
+                    undefined,
+                    {
+                        sensitivity:
+                            "base"
+                    }
+                );
+
+            }
+        );
+
+
+        updateSubjectCount(
+            subjectsCache.length
+        );
+
+
+        renderSubjects(
+            subjectsCache
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected subject loading error:",
+            error
+        );
+
+
+        list.innerHTML = `
+
+            <div class="subjects-error">
+
+                Unable to load subjects.
+                Please try again.
+
+            </div>
+
+        `;
+
+    }
+
+}
+
+
+// ==========================================
+// FILTER SUBJECTS
+// ==========================================
+
+function filterSubjects() {
+
+    const searchInput =
+        document.getElementById(
+            "subjectSearch"
+        );
+
+
+    if (!searchInput) {
+
+        return;
+
+    }
+
+
+    const query =
+        searchInput.value
+            .trim()
+            .toLowerCase();
+
+
+    if (!query) {
+
+        renderSubjects(
+            subjectsCache
+        );
+
+        return;
+
+    }
+
+
+    const filtered =
+        subjectsCache.filter(
+            function (subject) {
+
+                const name =
+                    String(
+                        subject.subject_name || ""
+                    )
+                    .toLowerCase();
+
+
+                const code =
+                    String(
+                        subject.subject_code || ""
+                    )
+                    .toLowerCase();
+
+
+                const className =
+                    String(
+                        subject.class_name || ""
+                    )
+                    .toLowerCase();
+
+
+                const session =
+                    String(
+                        subject.session || ""
+                    )
+                    .toLowerCase();
+
+
+                const term =
+                    String(
+                        subject.term || ""
+                    )
+                    .toLowerCase();
+
+
+                return (
+                    name.includes(query) ||
+                    code.includes(query) ||
+                    className.includes(query) ||
+                    session.includes(query) ||
+                    term.includes(query)
+                );
+
+            }
+        );
+
+
+    renderSubjects(
+        filtered
+    );
+
+}
+
+
+// ==========================================
+// RENDER SUBJECTS
+// ==========================================
+
+function renderSubjects(subjects) {
+
+    const list =
+        document.getElementById(
+            "subjectsList"
+        );
+
+
+    if (!list) {
+
+        return;
+
+    }
+
+
+    if (!subjects.length) {
+
+        const hasSearch =
+            Boolean(
+                document
+                    .getElementById(
+                        "subjectSearch"
+                    )
+                    ?.value
+                    .trim()
+            );
+
+
+        list.innerHTML = `
+
+            <div class="empty-subjects">
+
+                <div class="empty-icon">
+
+                    ${
+                        hasSearch
+                            ? "🔎"
+                            : "📚"
+                    }
+
+                </div>
+
+
+                <h3>
+
+                    ${
+                        hasSearch
+                            ? "No matching subjects"
+                            : "No subjects yet"
+                    }
+
+                </h3>
+
+
+                <p>
+
+                    ${
+                        hasSearch
+                            ? "Try another subject name, code or class."
+                            : "Add your first subject to begin."
+                    }
+
+                </p>
+
+            </div>
+
+        `;
+
+        return;
+
+    }
+
+
+    list.innerHTML = `
+
+        <div class="subjects-table-wrapper">
+
+            <table class="subjects-table">
+
+                <thead>
+
+                    <tr>
+
+                        <th>#</th>
+
+                        <th>Subject</th>
+
+                        <th>Code</th>
+
+                        <th>Class</th>
+
+                        <th>Session</th>
+
+                        <th>Term</th>
+
+                        <th>Actions</th>
+
+                    </tr>
+
+                </thead>
+
+
+                <tbody>
+
+                    ${subjects
+                        .map(
+                            function (
+                                subject,
+                                index
+                            ) {
+
+                                return `
+
+                                    <tr>
+
+                                        <td>
+                                            ${
+                                                index + 1
+                                            }
+                                        </td>
+
+
+                                        <td>
+
+                                            <strong>
+                                                ${escapeHTML(
+                                                    subject.subject_name
+                                                )}
+                                            </strong>
+
+                                        </td>
+
+
+                                        <td>
+
+                                            ${
+                                                subject.subject_code
+                                                    ? escapeHTML(
+                                                        subject.subject_code
+                                                    )
+                                                    : "—"
+                                            }
+
+                                        </td>
+
+
+                                        <td>
+                                            ${escapeHTML(
+                                                subject.class_name
+                                            )}
+                                        </td>
+
+
+                                        <td>
+                                            ${escapeHTML(
+                                                subject.session
+                                            )}
+                                        </td>
+
+
+                                        <td>
+                                            ${escapeHTML(
+                                                subject.term
+                                            )}
+                                        </td>
+
+
+                                        <td>
+
+                                            <div class="subject-actions">
+
+                                                <button
+                                                    type="button"
+                                                    class="subject-action edit-action"
+                                                    onclick="openSubjectForm('${escapeHTML(
+                                                        subject.id
+                                                    )}')"
+                                                >
+                                                    Edit
+                                                </button>
+
+
+                                                <button
+                                                    type="button"
+                                                    class="subject-action delete-action"
+                                                    onclick="deleteSubject('${escapeHTML(
+                                                        subject.id
+                                                    )}')"
+                                                >
+                                                    Delete
+                                                </button>
+
+                                            </div>
+
+                                        </td>
+
+                                    </tr>
+
+                                `;
+
+                            }
+                        )
+                        .join("")}
+
+                </tbody>
+
+            </table>
+
+        </div>
+
+    `;
+
+}
+
+
+// ==========================================
+// DELETE SUBJECT
+// ==========================================
+
+async function deleteSubject(subjectId) {
+
+    if (!currentUser) {
+
+        alert(
+            "You must be logged in."
+        );
+
+        return;
+
+    }
+
+
+    const subject =
+        subjectsCache.find(
+            function (item) {
+
+                return item.id === subjectId;
+
+            }
+        );
+
+
+    if (!subject) {
+
+        alert(
+            "Subject record not found."
+        );
+
+        return;
+
+    }
+
+
+    const confirmed =
+        window.confirm(
+            `Are you sure you want to delete "${subject.subject_name}"?\n\nThis action cannot be undone.`
+        );
+
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .from("subjects")
+                .delete()
+                .eq(
+                    "id",
+                    subjectId
+                )
+                .eq(
+                    "teacher_id",
+                    currentUser.id
+                );
+
+
+        if (error) {
+
+            console.error(
+                "Subject delete error:",
+                error
+            );
+
+
+            alert(
+                "Unable to delete this subject. Please try again."
+            );
+
+            return;
+
+        }
+
+
+        subjectsCache =
+            subjectsCache.filter(
+                function (item) {
+
+                    return (
+                        item.id !==
+                        subjectId
+                    );
+
+                }
+            );
+
+
+        updateSubjectCount(
+            subjectsCache.length
+        );
+
+
+        filterSubjects();
+
+
+        console.log(
+            "Subject deleted successfully:",
+            subject.subject_name
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected subject delete error:",
+            error
+        );
+
+
+        alert(
+            "Something went wrong while deleting the subject."
+        );
+
+    }
+
+}
+
+
+// ==========================================
+// UPDATE SUBJECT COUNT
+// ==========================================
+
+function updateSubjectCount(count) {
+
+    const element =
+        document.getElementById(
+            "subjectCount"
+        );
+
+
+    if (element) {
+
+        element.textContent =
+            count;
+
+    }
+
+}
+
+
+// ==========================================
+// SUBJECT FORM ERROR
+// ==========================================
+
+function showSubjectFormError(message) {
+
+    const error =
+        document.getElementById(
+            "subjectFormError"
+        );
+
+
+    if (error) {
+
+        error.textContent =
+            message;
+
+    }
+
+}
+
+
+// ==========================================
+// SUBJECTS STYLES
+// ==========================================
+
+function addSubjectsStyles() {
+
+    if (
+        document.getElementById(
+            "classmarkSubjectsStyles"
+        )
+    ) {
+
+        return;
+
+    }
+
+
+    const style =
+        document.createElement("style");
+
+
+    style.id =
+        "classmarkSubjectsStyles";
+
+
+    style.textContent = `
+
+        .subjects-section {
+
+            margin-top:
+                35px;
+
+            padding:
+                30px;
+
+            border-radius:
+                20px;
+
+            background:
+                #0f172a;
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+
+        }
+
+
+        .subjects-header {
+
+            display:
+                flex;
+
+            justify-content:
+                space-between;
+
+            align-items:
+                center;
+
+            gap:
+                20px;
+
+            margin-bottom:
+                25px;
+
+        }
+
+
+        .subjects-header h2 {
+
+            margin:
+                15px 0 8px;
+
+        }
+
+
+        .subjects-header p {
+
+            margin:
+                0;
+
+            opacity:
+                0.7;
+
+        }
+
+
+        .subjects-toolbar {
+
+            display:
+                flex;
+
+            justify-content:
+                space-between;
+
+            align-items:
+                center;
+
+            gap:
+                20px;
+
+            margin-bottom:
+                25px;
+
+            padding:
+                15px;
+
+            border-radius:
+                14px;
+
+            background:
+                #111827;
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.07
+                );
+
+        }
+
+
+        .subject-count {
+
+            display:
+                flex;
+
+            align-items:
+                baseline;
+
+            gap:
+                7px;
+
+            white-space:
+                nowrap;
+
+        }
+
+
+        .subject-count strong {
+
+            font-size:
+                24px;
+
+            color:
+                #d4af37;
+
+        }
+
+
+        .subject-count span {
+
+            opacity:
+                0.7;
+
+            font-size:
+                14px;
+
+        }
+
+
+        .subject-search {
+
+            flex:
+                1;
+
+            max-width:
+                500px;
+
+        }
+
+
+        .subject-search input {
+
+            width:
+                100%;
+
+            box-sizing:
+                border-box;
+
+            padding:
+                12px 15px;
+
+            border-radius:
+                10px;
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.12
+                );
+
+            background:
+                #0b1220;
+
+            color:
+                #ffffff;
+
+            font:
+                inherit;
+
+        }
+
+
+        .subject-search input:focus {
+
+            outline:
+                none;
+
+            border-color:
+                #d4af37;
+
+            box-shadow:
+                0 0 0 3px
+                rgba(
+                    212,
+                    175,
+                    55,
+                    0.12
+                );
+
+        }
+
+
+        .subject-form-container {
+
+            margin-bottom:
+                30px;
+
+            padding:
+                25px;
+
+            border-radius:
+                18px;
+
+            background:
+                #111827;
+
+            border:
+                1px solid
+                rgba(
+                    212,
+                    175,
+                    55,
+                    0.2
+                );
+
+        }
+
+
+        .subject-form-heading {
+
+            margin-bottom:
+                25px;
+
+        }
+
+
+        .subject-form-heading h3 {
+
+            margin:
+                12px 0 0;
+
+        }
+
+
+        .subjects-list {
+
+            width:
+                100%;
+
+        }
+
+
+        .subjects-loading {
+
+            padding:
+                30px;
+
+            text-align:
+                center;
+
+            opacity:
+                0.7;
+
+        }
+
+
+        .subjects-error {
+
+            padding:
+                25px;
+
+            text-align:
+                center;
+
+            border-radius:
+                14px;
+
+            background:
+                rgba(
+                    255,
+                    90,
+                    90,
+                    0.08
+                );
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    90,
+                    90,
+                    0.2
+                );
+
+            color:
+                #ffb0b0;
+
+        }
+
+
+        .subjects-error p {
+
+            margin:
+                8px 0 0;
+
+            opacity:
+                0.8;
+
+        }
+
+
+        .empty-subjects {
+
+            padding:
+                50px 20px;
+
+            text-align:
+                center;
+
+            border-radius:
+                16px;
+
+            background:
+                #111827;
+
+            border:
+                1px dashed
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.15
+                );
+
+        }
+
+
+        .subjects-table-wrapper {
+
+            width:
+                100%;
+
+            overflow-x:
+                auto;
+
+            border-radius:
+                16px;
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.08
+                );
+
+        }
+
+
+        .subjects-table {
+
+            width:
+                100%;
+
+            min-width:
+                850px;
+
+            border-collapse:
+                collapse;
+
+            background:
+                #111827;
+
+        }
+
+
+        .subjects-table th {
+
+            padding:
+                15px;
+
+            text-align:
+                left;
+
+            background:
+                #0b1220;
+
+            color:
+                #d4af37;
+
+            font-size:
+                13px;
+
+            text-transform:
+                uppercase;
+
+            letter-spacing:
+                0.04em;
+
+        }
+
+
+        .subjects-table td {
+
+            padding:
+                15px;
+
+            border-top:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.06
+                );
+
+            white-space:
+                nowrap;
+
+        }
+
+
+        .subjects-table tbody tr:hover {
+
+            background:
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.025
+                );
+
+        }
+
+
+        .subject-actions {
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            gap:
+                8px;
+
+        }
+
+
+        .subject-action {
+
+            border:
+                0;
+
+            border-radius:
+                8px;
+
+            padding:
+                8px 11px;
+
+            font:
+                inherit;
+
+            font-size:
+                12px;
+
+            font-weight:
+                700;
+
+            cursor:
+                pointer;
+
+        }
+
+
+        @media (max-width: 700px) {
+
+            .subjects-section {
+
+                padding:
+                    20px;
+
+            }
+
+
+            .subjects-header {
+
+                align-items:
+                    flex-start;
+
+                flex-direction:
+                    column;
+
+            }
+
+
+            .subjects-header .primary-btn {
+
+                width:
+                    100%;
+
+            }
+
+
+            .subjects-toolbar {
+
+                align-items:
+                    stretch;
+
+                flex-direction:
+                    column;
+
+            }
+
+
+            .subject-search {
+
+                max-width:
+                    none;
 
             }
 
