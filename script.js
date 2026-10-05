@@ -12,7 +12,7 @@ const SUPABASE_URL =
     "https://wzqcjbuotsipshjgrboo.supabase.co";
 
 const SUPABASE_PUBLIC_KEY =
-    "sb_publishable_qwB02PL2sdF7gHDOjXgJpA_-d_W4o6m";
+    "sb_publishable_qwB02PL2sdF7gHDOxjGpA_-d_W4o6m";
 
 
 // ------------------------------------------
@@ -32,6 +32,10 @@ const supabaseClient =
 
 let currentUser = null;
 let teacherProfile = null;
+
+let studentsCache = [];
+
+let editingStudentId = null;
 
 
 // ------------------------------------------
@@ -117,7 +121,7 @@ async function checkAuthentication() {
 supabaseClient
     .auth
     .onAuthStateChange(
-        function (event, session) {
+        async function (event, session) {
 
             console.log(
                 "Auth event:",
@@ -130,10 +134,38 @@ supabaseClient
                 currentUser =
                     session.user;
 
+
+                /*
+                 * If a session already exists
+                 * and the dashboard is not visible,
+                 * load the teacher profile.
+                 */
+                if (
+                    !teacherProfile &&
+                    !document.getElementById(
+                        "teacherDashboard"
+                    )
+                ) {
+
+                    await loadTeacherProfile();
+
+
+                    if (teacherProfile) {
+
+                        showTeacherDashboard();
+
+                    }
+
+                }
+
+
             } else {
 
                 currentUser = null;
                 teacherProfile = null;
+
+                editingStudentId = null;
+                studentsCache = [];
 
             }
 
@@ -225,7 +257,9 @@ async function login(event) {
 
 
         if (!teacherProfile) {
+
             return;
+
         }
 
 
@@ -287,6 +321,7 @@ async function loadTeacherProfile() {
         );
 
         return null;
+
     }
 
 
@@ -328,6 +363,7 @@ async function loadTeacherProfile() {
             );
 
             return null;
+
         }
 
 
@@ -342,6 +378,7 @@ async function loadTeacherProfile() {
             );
 
             return null;
+
         }
 
 
@@ -369,6 +406,7 @@ async function loadTeacherProfile() {
         );
 
         return null;
+
     }
 
 }
@@ -608,9 +646,15 @@ function showTeacherDashboard() {
     `;
 
 
-    document
-        .querySelector("main")
-        .appendChild(dashboard);
+    const main =
+        document.querySelector("main");
+
+
+    if (main) {
+
+        main.appendChild(dashboard);
+
+    }
 
 
     addDashboardStyles();
@@ -677,12 +721,17 @@ async function logoutTeacher() {
             );
 
             return;
+
         }
 
 
         currentUser = null;
 
         teacherProfile = null;
+
+        studentsCache = [];
+
+        editingStudentId = null;
 
 
         const dashboard =
@@ -1015,6 +1064,7 @@ async function showStudents() {
         );
 
         return;
+
     }
 
 
@@ -1042,6 +1092,9 @@ async function showStudents() {
         existing.remove();
 
     }
+
+
+    editingStudentId = null;
 
 
     const section =
@@ -1073,7 +1126,7 @@ async function showStudents() {
 
 
                 <p>
-                    Add and manage students in your class.
+                    Add, search and manage your students.
                 </p>
 
             </div>
@@ -1090,11 +1143,65 @@ async function showStudents() {
         </div>
 
 
+        <div class="students-toolbar">
+
+            <div class="student-count">
+
+                <strong id="studentCount">
+                    0
+                </strong>
+
+                <span>
+                    Students
+                </span>
+
+            </div>
+
+
+            <div class="student-search">
+
+                <label
+                    for="studentSearch"
+                    class="sr-only"
+                >
+                    Search students
+                </label>
+
+                <input
+                    type="search"
+                    id="studentSearch"
+                    placeholder="Search student name or admission number..."
+                    oninput="filterStudents()"
+                    autocomplete="off"
+                >
+
+            </div>
+
+        </div>
+
+
         <div
             id="studentFormContainer"
             class="student-form-container"
             style="display:none;"
         >
+
+            <div class="student-form-heading">
+
+                <div>
+
+                    <span class="hero-badge">
+                        STUDENT RECORD
+                    </span>
+
+                    <h3 id="studentFormTitle">
+                        Add Student
+                    </h3>
+
+                </div>
+
+            </div>
+
 
             <form
                 id="studentForm"
@@ -1246,6 +1353,7 @@ async function showStudents() {
                 <div
                     id="studentFormError"
                     class="form-error"
+                    role="alert"
                 ></div>
 
 
@@ -1263,6 +1371,7 @@ async function showStudents() {
                     <button
                         type="submit"
                         class="primary-btn"
+                        id="studentSubmitButton"
                     >
                         Save Student
                     </button>
@@ -1303,7 +1412,7 @@ async function showStudents() {
 // STUDENT FORM
 // ==========================================
 
-function openStudentForm() {
+function openStudentForm(studentId = null) {
 
     const formContainer =
         document.getElementById(
@@ -1311,43 +1420,177 @@ function openStudentForm() {
         );
 
 
-    if (!formContainer) {
+    const form =
+        document.getElementById(
+            "studentForm"
+        );
+
+
+    if (!formContainer || !form) {
 
         return;
 
     }
 
 
-    document
-        .getElementById("studentForm")
-        .reset();
+    editingStudentId =
+        studentId;
 
 
-    document
-        .getElementById("studentClass")
-        .value =
-            teacherProfile?.class_name || "";
+    form.reset();
 
 
-    document
-        .getElementById("studentSession")
-        .value =
-            teacherProfile?.session || "";
+    const title =
+        document.getElementById(
+            "studentFormTitle"
+        );
 
 
-    document
-        .getElementById("studentTerm")
-        .value =
-            teacherProfile?.term || "";
+    const submitButton =
+        document.getElementById(
+            "studentSubmitButton"
+        );
 
 
-    document
-        .getElementById("studentFormError")
-        .textContent = "";
+    if (studentId) {
+
+        const student =
+            studentsCache.find(
+                item =>
+                    item.id === studentId
+            );
+
+
+        if (!student) {
+
+            showStudentFormError(
+                "Student record could not be found."
+            );
+
+            return;
+
+        }
+
+
+        document
+            .getElementById("studentName")
+            .value =
+                student.full_name || "";
+
+
+        document
+            .getElementById("studentGender")
+            .value =
+                student.gender || "";
+
+
+        document
+            .getElementById("studentDob")
+            .value =
+                student.date_of_birth || "";
+
+
+        document
+            .getElementById("studentAdmission")
+            .value =
+                student.admission_number || "";
+
+
+        document
+            .getElementById("studentClass")
+            .value =
+                student.class_name || "";
+
+
+        document
+            .getElementById("studentSession")
+            .value =
+                student.session || "";
+
+
+        document
+            .getElementById("studentTerm")
+            .value =
+                student.term || "";
+
+
+        if (title) {
+
+            title.textContent =
+                "Edit Student";
+
+        }
+
+
+        if (submitButton) {
+
+            submitButton.textContent =
+                "Update Student";
+
+        }
+
+
+    } else {
+
+        document
+            .getElementById("studentClass")
+            .value =
+                teacherProfile?.class_name || "";
+
+
+        document
+            .getElementById("studentSession")
+            .value =
+                teacherProfile?.session || "";
+
+
+        document
+            .getElementById("studentTerm")
+            .value =
+                teacherProfile?.term || "";
+
+
+        if (title) {
+
+            title.textContent =
+                "Add Student";
+
+        }
+
+
+        if (submitButton) {
+
+            submitButton.textContent =
+                "Save Student";
+
+        }
+
+    }
+
+
+    showStudentFormError("");
 
 
     formContainer.style.display =
         "block";
+
+
+    formContainer.scrollIntoView({
+        behavior: "smooth",
+        block: "start"
+    });
+
+
+    setTimeout(
+        function () {
+
+            document
+                .getElementById("studentName")
+                ?.focus();
+
+        },
+        200
+    );
 
 }
 
@@ -1371,11 +1614,58 @@ function closeStudentForm() {
 
     }
 
+
+    editingStudentId = null;
+
+
+    const form =
+        document.getElementById(
+            "studentForm"
+        );
+
+
+    if (form) {
+
+        form.reset();
+
+    }
+
+
+    const title =
+        document.getElementById(
+            "studentFormTitle"
+        );
+
+
+    if (title) {
+
+        title.textContent =
+            "Add Student";
+
+    }
+
+
+    const submitButton =
+        document.getElementById(
+            "studentSubmitButton"
+        );
+
+
+    if (submitButton) {
+
+        submitButton.textContent =
+            "Save Student";
+
+    }
+
+
+    showStudentFormError("");
+
 }
 
 
 // ==========================================
-// SAVE STUDENT
+// SAVE / UPDATE STUDENT
 // ==========================================
 
 async function saveStudent(event) {
@@ -1390,6 +1680,7 @@ async function saveStudent(event) {
         );
 
         return;
+
     }
 
 
@@ -1448,6 +1739,7 @@ async function saveStudent(event) {
         );
 
         return;
+
     }
 
 
@@ -1458,6 +1750,7 @@ async function saveStudent(event) {
         );
 
         return;
+
     }
 
 
@@ -1468,6 +1761,7 @@ async function saveStudent(event) {
         );
 
         return;
+
     }
 
 
@@ -1478,6 +1772,7 @@ async function saveStudent(event) {
         );
 
         return;
+
     }
 
 
@@ -1488,12 +1783,13 @@ async function saveStudent(event) {
         );
 
         return;
+
     }
 
 
     const submitButton =
-        document.querySelector(
-            "#studentForm button[type='submit']"
+        document.getElementById(
+            "studentSubmitButton"
         );
 
 
@@ -1502,62 +1798,128 @@ async function saveStudent(event) {
         submitButton.disabled = true;
 
         submitButton.textContent =
-            "Saving...";
+            editingStudentId
+                ? "Updating..."
+                : "Saving...";
 
     }
 
 
+    showStudentFormError("");
+
+
     try {
+
+        const studentData = {
+
+            teacher_id:
+                currentUser.id,
+
+            full_name:
+                fullName,
+
+            gender:
+                gender,
+
+            date_of_birth:
+                dateOfBirth,
+
+            admission_number:
+                admissionNumber,
+
+            class_name:
+                className,
+
+            session:
+                session,
+
+            term:
+                term
+
+        };
+
+
+        let response;
+
+
+        // ----------------------------------
+        // UPDATE EXISTING STUDENT
+        // ----------------------------------
+
+        if (editingStudentId) {
+
+            response =
+                await supabaseClient
+                    .from("students")
+                    .update(
+                        studentData
+                    )
+                    .eq(
+                        "id",
+                        editingStudentId
+                    )
+                    .eq(
+                        "teacher_id",
+                        currentUser.id
+                    );
+
+
+        // ----------------------------------
+        // INSERT NEW STUDENT
+        // ----------------------------------
+
+        } else {
+
+            response =
+                await supabaseClient
+                    .from("students")
+                    .insert([
+                        studentData
+                    ]);
+
+        }
+
 
         const {
             error
-        } =
-            await supabaseClient
-                .from("students")
-                .insert([
-                    {
-
-                        teacher_id:
-                            currentUser.id,
-
-                        full_name:
-                            fullName,
-
-                        gender:
-                            gender,
-
-                        date_of_birth:
-                            dateOfBirth,
-
-                        admission_number:
-                            admissionNumber,
-
-                        class_name:
-                            className,
-
-                        session:
-                            session,
-
-                        term:
-                            term
-
-                    }
-                ]);
+        } = response;
 
 
         if (error) {
 
             console.error(
-                "Student insert error:",
+                "Student save/update error:",
                 error
             );
 
-            showStudentFormError(
-                "Unable to save student. Please try again."
-            );
+
+            // PostgreSQL duplicate error
+            if (
+                error.code === "23505"
+            ) {
+
+                showStudentFormError(
+                    "This admission number is already assigned to another student."
+                );
+
+            } else {
+
+                showStudentFormError(
+                    "Unable to save the student. Please check the information and try again."
+                );
+
+            }
+
 
             return;
+
         }
+
+
+        const wasEditing =
+            Boolean(
+                editingStudentId
+            );
 
 
         closeStudentForm();
@@ -1566,12 +1928,20 @@ async function saveStudent(event) {
         await loadStudents();
 
 
+        console.log(
+            wasEditing
+                ? "Student updated successfully."
+                : "Student added successfully."
+        );
+
+
     } catch (error) {
 
         console.error(
             "Unexpected student save error:",
             error
         );
+
 
         showStudentFormError(
             "Something went wrong. Please try again."
@@ -1585,7 +1955,9 @@ async function saveStudent(event) {
             submitButton.disabled = false;
 
             submitButton.textContent =
-                "Save Student";
+                editingStudentId
+                    ? "Update Student"
+                    : "Save Student";
 
         }
 
@@ -1613,6 +1985,15 @@ async function loadStudents() {
     }
 
 
+    list.innerHTML = `
+
+        <div class="students-loading">
+            Loading students...
+        </div>
+
+    `;
+
+
     try {
 
         const {
@@ -1635,12 +2016,6 @@ async function loadStudents() {
                 .eq(
                     "teacher_id",
                     currentUser.id
-                )
-                .order(
-                    "full_name",
-                    {
-                        ascending: true
-                    }
                 );
 
 
@@ -1654,18 +2029,41 @@ async function loadStudents() {
 
             list.innerHTML = `
 
-                <p class="form-error">
-                    Unable to load students.
-                </p>
+                <div class="students-error">
+
+                    <strong>
+                        Unable to load students.
+                    </strong>
+
+                    <p>
+                        Please refresh the section and try again.
+                    </p>
+
+                </div>
 
             `;
 
             return;
+
         }
 
 
+        studentsCache =
+            data || [];
+
+
+        sortStudents(
+            studentsCache
+        );
+
+
+        updateStudentCount(
+            studentsCache.length
+        );
+
+
         renderStudents(
-            data || []
+            studentsCache
         );
 
 
@@ -1676,7 +2074,179 @@ async function loadStudents() {
             error
         );
 
+
+        list.innerHTML = `
+
+            <div class="students-error">
+
+                Unable to load students.
+                Please try again.
+
+            </div>
+
+        `;
+
     }
+
+}
+
+
+// ==========================================
+// SORT STUDENTS
+// Male A-Z
+// Female A-Z
+// ==========================================
+
+function sortStudents(students) {
+
+    students.sort(
+        function (a, b) {
+
+            const genderOrder = {
+
+                Male: 1,
+
+                Female: 2
+
+            };
+
+
+            const genderA =
+                genderOrder[
+                    a.gender
+                ] || 3;
+
+
+            const genderB =
+                genderOrder[
+                    b.gender
+                ] || 3;
+
+
+            if (
+                genderA !== genderB
+            ) {
+
+                return (
+                    genderA -
+                    genderB
+                );
+
+            }
+
+
+            return String(
+                a.full_name || ""
+            ).localeCompare(
+                String(
+                    b.full_name || ""
+                ),
+                undefined,
+                {
+                    sensitivity:
+                        "base"
+                }
+            );
+
+        }
+    );
+
+}
+
+
+// ==========================================
+// UPDATE STUDENT COUNT
+// ==========================================
+
+function updateStudentCount(count) {
+
+    const element =
+        document.getElementById(
+            "studentCount"
+        );
+
+
+    if (element) {
+
+        element.textContent =
+            count;
+
+    }
+
+}
+
+
+// ==========================================
+// FILTER / SEARCH STUDENTS
+// ==========================================
+
+function filterStudents() {
+
+    const searchInput =
+        document.getElementById(
+            "studentSearch"
+        );
+
+
+    if (!searchInput) {
+
+        return;
+
+    }
+
+
+    const query =
+        searchInput.value
+            .trim()
+            .toLowerCase();
+
+
+    if (!query) {
+
+        renderStudents(
+            studentsCache
+        );
+
+        return;
+
+    }
+
+
+    const filtered =
+        studentsCache.filter(
+            function (student) {
+
+                const name =
+                    String(
+                        student.full_name || ""
+                    ).toLowerCase();
+
+
+                const admission =
+                    String(
+                        student.admission_number || ""
+                    ).toLowerCase();
+
+
+                const gender =
+                    String(
+                        student.gender || ""
+                    ).toLowerCase();
+
+
+                return (
+                    name.includes(query) ||
+                    admission.includes(query) ||
+                    gender.includes(query)
+                );
+
+            }
+        );
+
+
+    renderStudents(
+        filtered
+    );
 
 }
 
@@ -1702,21 +2272,45 @@ function renderStudents(students) {
 
     if (!students.length) {
 
+        const hasSearch =
+            Boolean(
+                document
+                    .getElementById(
+                        "studentSearch"
+                    )
+                    ?.value
+                    .trim()
+            );
+
+
         list.innerHTML = `
 
             <div class="empty-students">
 
                 <div class="empty-icon">
-                    👨‍🎓
+                    ${
+                        hasSearch
+                            ? "🔎"
+                            : "👨‍🎓"
+                    }
                 </div>
 
+
                 <h3>
-                    No students yet
+                    ${
+                        hasSearch
+                            ? "No matching students"
+                            : "No students yet"
+                    }
                 </h3>
 
+
                 <p>
-                    Add your first student to begin
-                    managing your class.
+                    ${
+                        hasSearch
+                            ? "Try a different name, admission number or gender."
+                            : "Add your first student to begin managing your class."
+                    }
                 </p>
 
             </div>
@@ -1724,6 +2318,7 @@ function renderStudents(students) {
         `;
 
         return;
+
     }
 
 
@@ -1765,6 +2360,10 @@ function renderStudents(students) {
                             Term
                         </th>
 
+                        <th>
+                            Actions
+                        </th>
+
                     </tr>
 
                 </thead>
@@ -1774,77 +2373,124 @@ function renderStudents(students) {
 
                     ${students
                         .map(
-                            (student, index) => `
+                            function (
+                                student,
+                                index
+                            ) {
 
-                            <tr>
+                                return `
 
-                                <td>
-                                    ${index + 1}
-                                </td>
+                                    <tr>
 
-
-                                <td>
-
-                                    <strong>
-                                        ${escapeHTML(
-                                            student.full_name
-                                        )}
-                                    </strong>
-
-                                </td>
+                                        <td>
+                                            ${
+                                                index + 1
+                                            }
+                                        </td>
 
 
-                                <td>
+                                        <td>
 
-                                    ${escapeHTML(
-                                        student.gender
-                                    )}
+                                            <strong>
+                                                ${escapeHTML(
+                                                    student.full_name
+                                                )}
+                                            </strong>
 
-                                </td>
+                                        </td>
 
 
-                                <td>
+                                        <td>
 
-                                    ${
-                                        student.admission_number
-                                            ? escapeHTML(
+                                            <span
+                                                class="gender-badge ${
+                                                    student.gender === "Male"
+                                                        ? "gender-male"
+                                                        : "gender-female"
+                                                }"
+                                            >
+                                                ${escapeHTML(
+                                                    student.gender
+                                                )}
+                                            </span>
+
+                                        </td>
+
+
+                                        <td>
+
+                                            ${
                                                 student.admission_number
-                                            )
-                                            : "—"
-                                    }
+                                                    ? escapeHTML(
+                                                        student.admission_number
+                                                    )
+                                                    : "—"
+                                            }
 
-                                </td>
-
-
-                                <td>
-
-                                    ${escapeHTML(
-                                        student.class_name
-                                    )}
-
-                                </td>
+                                        </td>
 
 
-                                <td>
+                                        <td>
 
-                                    ${escapeHTML(
-                                        student.session
-                                    )}
+                                            ${escapeHTML(
+                                                student.class_name
+                                            )}
 
-                                </td>
+                                        </td>
 
 
-                                <td>
+                                        <td>
 
-                                    ${escapeHTML(
-                                        student.term
-                                    )}
+                                            ${escapeHTML(
+                                                student.session
+                                            )}
 
-                                </td>
+                                        </td>
 
-                            </tr>
 
-                        `
+                                        <td>
+
+                                            ${escapeHTML(
+                                                student.term
+                                            )}
+
+                                        </td>
+
+
+                                        <td>
+
+                                            <div class="student-actions">
+
+                                                <button
+                                                    type="button"
+                                                    class="student-action edit-action"
+                                                    onclick="openStudentForm('${escapeHTML(
+                                                        student.id
+                                                    )}')"
+                                                >
+                                                    Edit
+                                                </button>
+
+
+                                                <button
+                                                    type="button"
+                                                    class="student-action delete-action"
+                                                    onclick="deleteStudent('${escapeHTML(
+                                                        student.id
+                                                    )}')"
+                                                >
+                                                    Delete
+                                                </button>
+
+                                            </div>
+
+                                        </td>
+
+                                    </tr>
+
+                                `;
+
+                            }
                         )
                         .join("")}
 
@@ -1855,6 +2501,134 @@ function renderStudents(students) {
         </div>
 
     `;
+
+}
+
+
+// ==========================================
+// DELETE STUDENT
+// ==========================================
+
+async function deleteStudent(studentId) {
+
+    if (!currentUser) {
+
+        alert(
+            "You must be logged in."
+        );
+
+        return;
+
+    }
+
+
+    const student =
+        studentsCache.find(
+            function (item) {
+
+                return item.id === studentId;
+
+            }
+        );
+
+
+    if (!student) {
+
+        alert(
+            "Student record not found."
+        );
+
+        return;
+
+    }
+
+
+    const confirmed =
+        window.confirm(
+            `Are you sure you want to delete "${student.full_name}"?\n\nThis action cannot be undone.`
+        );
+
+
+    if (!confirmed) {
+
+        return;
+
+    }
+
+
+    try {
+
+        const {
+            error
+        } =
+            await supabaseClient
+                .from("students")
+                .delete()
+                .eq(
+                    "id",
+                    studentId
+                )
+                .eq(
+                    "teacher_id",
+                    currentUser.id
+                );
+
+
+        if (error) {
+
+            console.error(
+                "Student delete error:",
+                error
+            );
+
+            alert(
+                "Unable to delete this student. Please try again."
+            );
+
+            return;
+
+        }
+
+
+        studentsCache =
+            studentsCache.filter(
+                function (item) {
+
+                    return (
+                        item.id !==
+                        studentId
+                    );
+
+                }
+            );
+
+
+        updateStudentCount(
+            studentsCache.length
+        );
+
+
+        filterStudents();
+
+
+        console.log(
+            "Student deleted successfully:",
+            student.full_name
+        );
+
+
+    } catch (error) {
+
+        console.error(
+            "Unexpected student delete error:",
+            error
+        );
+
+        alert(
+            "Something went wrong while deleting the student."
+        );
+
+    }
 
 }
 
@@ -1910,7 +2684,8 @@ function addStudentsStyles() {
 
         .students-section {
 
-            margin-top: 35px;
+            margin-top:
+                35px;
 
             padding:
                 30px;
@@ -1948,7 +2723,7 @@ function addStudentsStyles() {
                 20px;
 
             margin-bottom:
-                30px;
+                25px;
 
         }
 
@@ -1968,6 +2743,149 @@ function addStudentsStyles() {
 
             opacity:
                 0.7;
+
+        }
+
+
+        .students-toolbar {
+
+            display:
+                flex;
+
+            justify-content:
+                space-between;
+
+            align-items:
+                center;
+
+            gap:
+                20px;
+
+            margin-bottom:
+                25px;
+
+            padding:
+                15px;
+
+            border-radius:
+                14px;
+
+            background:
+                #111827;
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.07
+                );
+
+        }
+
+
+        .student-count {
+
+            display:
+                flex;
+
+            align-items:
+                baseline;
+
+            gap:
+                7px;
+
+            white-space:
+                nowrap;
+
+        }
+
+
+        .student-count strong {
+
+            font-size:
+                24px;
+
+            color:
+                #d4af37;
+
+        }
+
+
+        .student-count span {
+
+            opacity:
+                0.7;
+
+            font-size:
+                14px;
+
+        }
+
+
+        .student-search {
+
+            flex:
+                1;
+
+            max-width:
+                500px;
+
+        }
+
+
+        .student-search input {
+
+            width:
+                100%;
+
+            box-sizing:
+                border-box;
+
+            padding:
+                12px 15px;
+
+            border-radius:
+                10px;
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    255,
+                    255,
+                    0.12
+                );
+
+            background:
+                #0b1220;
+
+            color:
+                #ffffff;
+
+            font:
+                inherit;
+
+        }
+
+
+        .student-search input:focus {
+
+            outline:
+                none;
+
+            border-color:
+                #d4af37;
+
+            box-shadow:
+                0 0 0 3px
+                rgba(
+                    212,
+                    175,
+                    55,
+                    0.12
+                );
 
         }
 
@@ -1994,6 +2912,22 @@ function addStudentsStyles() {
                     55,
                     0.2
                 );
+
+        }
+
+
+        .student-form-heading {
+
+            margin-bottom:
+                25px;
+
+        }
+
+
+        .student-form-heading h3 {
+
+            margin:
+                12px 0 0;
 
         }
 
@@ -2061,7 +2995,8 @@ function addStudentsStyles() {
             color:
                 #ffffff;
 
-            font: inherit;
+            font:
+                inherit;
 
             box-sizing:
                 border-box;
@@ -2139,6 +3074,51 @@ function addStudentsStyles() {
 
             opacity:
                 0.7;
+
+        }
+
+
+        .students-error {
+
+            padding:
+                25px;
+
+            text-align:
+                center;
+
+            border-radius:
+                14px;
+
+            background:
+                rgba(
+                    255,
+                    90,
+                    90,
+                    0.08
+                );
+
+            border:
+                1px solid
+                rgba(
+                    255,
+                    90,
+                    90,
+                    0.2
+                );
+
+            color:
+                #ffb0b0;
+
+        }
+
+
+        .students-error p {
+
+            margin:
+                8px 0 0;
+
+            opacity:
+                0.8;
 
         }
 
@@ -2228,7 +3208,7 @@ function addStudentsStyles() {
                 100%;
 
             min-width:
-                760px;
+                950px;
 
             border-collapse:
                 collapse;
@@ -2298,6 +3278,208 @@ function addStudentsStyles() {
         }
 
 
+        .gender-badge {
+
+            display:
+                inline-flex;
+
+            align-items:
+                center;
+
+            padding:
+                5px 9px;
+
+            border-radius:
+                999px;
+
+            font-size:
+                12px;
+
+            font-weight:
+                700;
+
+        }
+
+
+        .gender-male {
+
+            background:
+                rgba(
+                    59,
+                    130,
+                    246,
+                    0.12
+                );
+
+            color:
+                #93c5fd;
+
+        }
+
+
+        .gender-female {
+
+            background:
+                rgba(
+                    236,
+                    72,
+                    153,
+                    0.12
+                );
+
+            color:
+                #f9a8d4;
+
+        }
+
+
+        .student-actions {
+
+            display:
+                flex;
+
+            align-items:
+                center;
+
+            gap:
+                8px;
+
+        }
+
+
+        .student-action {
+
+            border:
+                0;
+
+            border-radius:
+                8px;
+
+            padding:
+                8px 11px;
+
+            font:
+                inherit;
+
+            font-size:
+                12px;
+
+            font-weight:
+                700;
+
+            cursor:
+                pointer;
+
+        }
+
+
+        .edit-action {
+
+            background:
+                rgba(
+                    212,
+                    175,
+                    55,
+                    0.12
+                );
+
+            color:
+                #e6c95c;
+
+        }
+
+
+        .edit-action:hover {
+
+            background:
+                rgba(
+                    212,
+                    175,
+                    55,
+                    0.22
+                );
+
+        }
+
+
+        .delete-action {
+
+            background:
+                rgba(
+                    239,
+                    68,
+                    68,
+                    0.1
+                );
+
+            color:
+                #fca5a5;
+
+        }
+
+
+        .delete-action:hover {
+
+            background:
+                rgba(
+                    239,
+                    68,
+                    68,
+                    0.2
+                );
+
+        }
+
+
+        .student-action:focus-visible {
+
+            outline:
+                2px solid
+                #d4af37;
+
+            outline-offset:
+                2px;
+
+        }
+
+
+        .sr-only {
+
+            position:
+                absolute;
+
+            width:
+                1px;
+
+            height:
+                1px;
+
+            padding:
+                0;
+
+            margin:
+                -1px;
+
+            overflow:
+                hidden;
+
+            clip:
+                rect(
+                    0,
+                    0,
+                    0,
+                    0
+                );
+
+            white-space:
+                nowrap;
+
+            border:
+                0;
+
+        }
+
+
         @media (max-width: 700px) {
 
             .students-section {
@@ -2323,6 +3505,25 @@ function addStudentsStyles() {
 
                 width:
                     100%;
+
+            }
+
+
+            .students-toolbar {
+
+                align-items:
+                    stretch;
+
+                flex-direction:
+                    column;
+
+            }
+
+
+            .student-search {
+
+                max-width:
+                    none;
 
             }
 
